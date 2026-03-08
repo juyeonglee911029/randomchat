@@ -362,6 +362,12 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
+.chat-messages::after {
+    content: '';
+    display: block;
+    min-height: 250px; /* Force minimum empty space so the area is always at least 10 lines tall */
+}
+
 /* Custom Scrollbar for Chat */
 .chat-messages::-webkit-scrollbar {
     width: 6px;
@@ -575,6 +581,7 @@ body {
         max-width: 100%;
         border-left: none;
         border-top: 1px solid var(--border-color);
+        min-height: 250px;
     }
     
     .local-wrapper {

@@ -62,9 +62,11 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     });
 
     // Add local tracks to connection
-    localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, localStream);
-    });
+    if (localStream) {
+        localStream.getTracks().forEach(track => {
+            peerConnection.addTrack(track, localStream);
+        });
+    }
 
     // Listen for remote tracks
     peerConnection.addEventListener('track', event => {
@@ -96,9 +98,9 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         // Update room status
         await updateDoc(roomRef, {
             status: "joined",
-            calleeGender: myInfo.gender,
-            calleeName: myInfo.name,
-            calleeInsta: myInfo.insta
+            calleeGender: myInfo.gender || 'unspecified',
+            calleeName: myInfo.name || 'Anonymous',
+            calleeInsta: myInfo.insta || ''
         });
 
         setupChat(roomId, callbacks.onMessage);
@@ -146,9 +148,9 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         const roomWithOffer = {
             offer: { type: offer.type, sdp: offer.sdp },
             status: "waiting",
-            callerGender: myInfo.gender,
-            callerName: myInfo.name,
-            callerInsta: myInfo.insta,
+            callerGender: myInfo.gender || 'unspecified',
+            callerName: myInfo.name || 'Anonymous',
+            callerInsta: myInfo.insta || '',
             createdAt: Date.now()
         };
         

@@ -68,29 +68,33 @@ async function init() {
             }
 
             // Save to Firestore
-            const userRef = doc(db, 'users', user.uid);
-            const userSnap = await getDoc(userRef);
-            
-            if (userSnap.exists()) {
-                const data = userSnap.data();
-                myInfo.gender = data.gender || 'unspecified';
-                myInfo.prefGender = data.prefGender || 'any';
-                myInfo.insta = data.insta || '';
+            try {
+                const userRef = doc(db, 'users', user.uid);
+                const userSnap = await getDoc(userRef);
                 
-                // Keep presence
-                await updateDoc(userRef, { online: true, lastSeen: Date.now() });
-            } else {
-                await setDoc(userRef, {
-                    name: myInfo.name,
-                    email: user.email || '',
-                    photoURL: myInfo.photoUrl || '',
-                    gender: 'unspecified',
-                    prefGender: 'any',
-                    insta: '',
-                    online: true,
-                    createdAt: Date.now(),
-                    lastSeen: Date.now()
-                });
+                if (userSnap.exists()) {
+                    const data = userSnap.data();
+                    myInfo.gender = data.gender || 'unspecified';
+                    myInfo.prefGender = data.prefGender || 'any';
+                    myInfo.insta = data.insta || '';
+                    
+                    // Keep presence
+                    await updateDoc(userRef, { online: true, lastSeen: Date.now() });
+                } else {
+                    await setDoc(userRef, {
+                        name: myInfo.name,
+                        email: user.email || '',
+                        photoURL: myInfo.photoUrl || '',
+                        gender: 'unspecified',
+                        prefGender: 'any',
+                        insta: '',
+                        online: true,
+                        createdAt: Date.now(),
+                        lastSeen: Date.now()
+                    });
+                }
+            } catch (err) {
+                console.warn("Firestore user sync skipped (likely anonymous user missing rules):", err.message);
             }
             
             // Set disconnect hook for presence (best effort in Firestore without cloud functions)
