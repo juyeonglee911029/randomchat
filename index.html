@@ -15,7 +15,19 @@
                 <i class="material-icons">videocam</i>
                 <h1>RandomChat</h1>
             </div>
+            <div class="stats">
+                <span class="stat-badge">Total: <span id="totalUsers">0</span></span>
+                <span class="stat-badge">Online: <span id="onlineUsers">0</span></span>
+            </div>
             <div class="controls">
+                <button id="googleLoginBtn" class="btn secondary">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
+                    Login
+                </button>
+                <div id="userInfo" style="display: none; align-items: center; gap: 10px; margin-right: 15px;">
+                    <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%;">
+                    <span id="userName" style="font-weight: bold; color: white;"></span>
+                </div>
                 <button id="findMatchBtn" class="btn primary">
                     <i class="material-icons">shuffle</i>
                     Find Stranger
@@ -31,6 +43,24 @@
         </header>
 
         <main class="main-content">
+            <!-- Left AdSense Sidebar -->
+            <aside class="ad-sidebar">
+                <div class="ad-container">
+                    <!-- Google AdSense Code -->
+                    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+                    <ins class="adsbygoogle"
+                         style="display:block"
+                         data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                         data-ad-slot="1234567890"
+                         data-ad-format="auto"
+                         data-full-width-responsive="true"></ins>
+                    <script>
+                         (adsbygoogle = window.adsbygoogle || []).push({});
+                    </script>
+                    <div style="text-align:center; color: #888; font-size: 12px; margin-top: 10px;">Advertisement</div>
+                </div>
+            </aside>
+
             <!-- Video Area -->
             <section class="video-container">
                 <div class="video-wrapper remote-wrapper">
@@ -41,7 +71,7 @@
                     </div>
                 </div>
                 
-                <div class="video-wrapper local-wrapper">
+                <div class="video-wrapper local-wrapper" id="localVideoContainer">
                     <video id="localVideo" autoplay playsinline muted></video>
                     <div class="video-status">You</div>
                 </div>
