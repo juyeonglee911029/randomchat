@@ -124,6 +124,7 @@ googleLoginBtn.addEventListener('click', async () => {
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login Error:", error);
+        alert("Google Login Failed: " + error.message + "\n\nPlease ensure Google Sign-In is enabled in your Firebase Authentication settings and your domain is whitelisted.");
     }
 });
 

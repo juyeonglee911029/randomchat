@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Video Chat</title>
+    <title>CYBERCHAT</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -12,13 +13,16 @@
         <!-- Header / Controls -->
         <header class="header">
             <div class="logo">
-                <i class="material-icons">videocam</i>
-                <h1>RandomChat</h1>
+                <i class="material-icons" style="color: var(--primary);">videocam</i>
+                <h1 style="color: var(--primary); font-weight: 700; letter-spacing: 1px;">CYBERCHAT</h1>
             </div>
+            
             <div class="stats">
-                <span class="stat-badge">Total: <span id="totalUsers">0</span></span>
-                <span class="stat-badge">Online: <span id="onlineUsers">0</span></span>
+                <span class="stat-badge">Total Users: <span id="totalUsers">0</span></span>
+                <span class="stat-badge" style="color: #FFD700; border-color: rgba(255, 215, 0, 0.3); background: rgba(255, 215, 0, 0.1);">Online Now: <span id="onlineUsers">0</span></span>
+                <div id="google_translate_element"></div>
             </div>
+
             <div class="controls">
                 <button id="googleLoginBtn" class="btn secondary">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
@@ -83,7 +87,7 @@
                     <h2>Chat</h2>
                 </div>
                 <div id="chatMessages" class="chat-messages">
-                    <div class="system-message">Welcome to RandomChat. Click "Find Stranger" to start.</div>
+                    <div class="system-message">Welcome to CYBERCHAT. Click "Find Stranger" to start.</div>
                 </div>
                 <div class="chat-input-area">
                     <input type="text" id="messageInput" placeholder="Type a message..." disabled>
@@ -94,6 +98,23 @@
             </aside>
         </main>
         
+        <!-- Bottom AdSense -->
+        <div class="ad-bottom">
+            <div class="ad-container-bottom">
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                     data-ad-slot="0987654321"
+                     data-ad-format="horizontal"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+                <div style="text-align:center; color: #888; font-size: 12px; margin-top: 5px;">Advertisement</div>
+            </div>
+        </div>
+
         <!-- Settings Modal (Hidden by default) -->
         <div id="settingsModal" class="modal">
             <div class="modal-content">
@@ -123,6 +144,14 @@
             </div>
         </div>
     </div>
+
+    <!-- Google Translate Script -->
+    <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'ko,en,ja,zh-CN'}, 'google_translate_element');
+    }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- Firebase SDK (ES Modules loaded directly in JS) -->
     <script type="module" src="js/main.js"></script>
