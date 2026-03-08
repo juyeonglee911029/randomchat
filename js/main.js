@@ -33,6 +33,7 @@ let myInfo = {
     gender: 'unspecified',
     prefGender: 'any',
     insta: '',
+    whatsapp: '',
     name: 'Anonymous',
     photoUrl: ''
 };
@@ -77,6 +78,7 @@ async function init() {
                     myInfo.gender = data.gender || 'unspecified';
                     myInfo.prefGender = data.prefGender || 'any';
                     myInfo.insta = data.insta || '';
+                    myInfo.whatsapp = data.whatsapp || '';
                     
                     // Keep presence
                     await updateDoc(userRef, { online: true, lastSeen: Date.now() });
@@ -88,6 +90,7 @@ async function init() {
                         gender: 'unspecified',
                         prefGender: 'any',
                         insta: '',
+                        whatsapp: '',
                         online: true,
                         createdAt: Date.now(),
                         lastSeen: Date.now()
@@ -160,20 +163,48 @@ function loadSettingsToUI() {
     
     document.getElementById('prefGender').value = myInfo.prefGender;
     document.getElementById('myInsta').value = myInfo.insta;
+    document.getElementById('myWhatsapp').value = myInfo.whatsapp;
+    
+    updateLocalSocialIcons();
 }
 
 async function saveSettings() {
     myInfo.prefGender = document.getElementById('prefGender').value;
     myInfo.insta = document.getElementById('myInsta').value;
+    myInfo.whatsapp = document.getElementById('myWhatsapp').value;
+    
+    updateLocalSocialIcons();
     
     if (auth.currentUser) {
         await updateDoc(doc(db, 'users', auth.currentUser.uid), {
             prefGender: myInfo.prefGender,
-            insta: myInfo.insta
+            insta: myInfo.insta,
+            whatsapp: myInfo.whatsapp
         });
     }
     
     settingsModal.classList.remove('active');
+}
+
+function updateLocalSocialIcons() {
+    const instaLink = document.getElementById('myInstaLink');
+    const waLink = document.getElementById('myWhatsappLink');
+    
+    if(myInfo.insta) {
+        instaLink.href = myInfo.insta;
+        instaLink.style.display = 'flex';
+    } else {
+        instaLink.style.display = 'none';
+    }
+    
+    if(myInfo.whatsapp) {
+        // Format WhatsApp link correctly (remove non-digits except +)
+        const waClean = myInfo.whatsapp.replace(/[^\d+]/g, '');
+        waLink.href = `https://wa.me/${waClean}`;
+        waLink.style.display = 'flex';
+    } else {
+        waLink.style.display = 'none';
+    }
 }
 
 // Callbacks for WebRTC/Chat
@@ -219,14 +250,34 @@ const callbacks = {
             partnerGenderEl.textContent = info.gender || 'unspecified';
         }
     },
-    onPartnerSocial: (instaUrl) => {
+    onPartnerSocial: (instaUrl, whatsappNum) => {
+        const partnerSocialDiv = document.getElementById('partnerSocial');
+        const partnerInstaLink = document.getElementById('partnerInstaLink');
+        const partnerWaLink = document.getElementById('partnerWhatsappLink');
+        
+        let hasSocial = false;
+        
         if (instaUrl) {
-            partnerSocial.style.display = 'flex';
-            partnerSocial.innerHTML = `
-                <a href="${instaUrl}" target="_blank">
-                    <i class="material-icons">camera_alt</i> Instagram
-                </a>
-            `;
+            partnerInstaLink.href = instaUrl;
+            partnerInstaLink.style.display = 'flex';
+            hasSocial = true;
+        } else {
+            partnerInstaLink.style.display = 'none';
+        }
+        
+        if (whatsappNum) {
+            const waClean = whatsappNum.replace(/[^\d+]/g, '');
+            partnerWaLink.href = `https://wa.me/${waClean}`;
+            partnerWaLink.style.display = 'flex';
+            hasSocial = true;
+        } else {
+            partnerWaLink.style.display = 'none';
+        }
+        
+        if(hasSocial) {
+            partnerSocialDiv.style.display = 'flex';
+        } else {
+            partnerSocialDiv.style.display = 'none';
         }
     }
 };

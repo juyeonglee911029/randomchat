@@ -111,14 +111,17 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             status: "joined",
             calleeGender: myInfo.gender || 'unspecified',
             calleeName: myInfo.name || 'Anonymous',
-            calleeInsta: myInfo.insta || ''
+            calleeInsta: myInfo.insta || '',
+            calleeWhatsapp: myInfo.whatsapp || ''
         });
 
         setupChat(roomId, callbacks.onMessage);
         
         // Notify UI about partner social info
         const data = roomDoc.data();
-        if(data.callerInsta) callbacks.onPartnerSocial(data.callerInsta);
+        if(callbacks.onPartnerSocial) {
+            callbacks.onPartnerSocial(data.callerInsta, data.callerWhatsapp);
+        }
         if(callbacks.onPartnerInfo) {
             callbacks.onPartnerInfo({
                 name: data.callerName || 'Anonymous',
@@ -162,6 +165,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             callerGender: myInfo.gender || 'unspecified',
             callerName: myInfo.name || 'Anonymous',
             callerInsta: myInfo.insta || '',
+            callerWhatsapp: myInfo.whatsapp || '',
             createdAt: Date.now()
         };
         
@@ -179,7 +183,9 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                 await peerConnection.setRemoteDescription(rtcSessionDescription);
             }
             if (data.status === "joined") {
-                if (data.calleeInsta) callbacks.onPartnerSocial(data.calleeInsta);
+                if (callbacks.onPartnerSocial) {
+                    callbacks.onPartnerSocial(data.calleeInsta, data.calleeWhatsapp);
+                }
                 if (!partnerInfoFired && callbacks.onPartnerInfo) {
                     partnerInfoFired = true;
                     callbacks.onPartnerInfo({

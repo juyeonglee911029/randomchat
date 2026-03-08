@@ -85,14 +85,29 @@
                     <div class="partner-info" id="partnerInfo" style="display: none;">
                         <span id="partnerName"></span> (<span id="partnerGender"></span>)
                     </div>
-                    <div class="social-links" id="partnerSocial" style="display: none;">
-                        <!-- Dynamically populated -->
+                    <!-- Partner floating social icons -->
+                    <div class="floating-social remote-social" id="partnerSocial" style="display: none;">
+                        <a id="partnerInstaLink" href="#" target="_blank" style="display: none;" title="Instagram">
+                            <i class="material-icons">camera_alt</i>
+                        </a>
+                        <a id="partnerWhatsappLink" href="#" target="_blank" style="display: none;" title="WhatsApp">
+                            <i class="material-icons">chat</i>
+                        </a>
                     </div>
                 </div>
                 
                 <div class="video-wrapper local-wrapper" id="localVideoContainer">
                     <video id="localVideo" autoplay playsinline muted></video>
                     <div class="video-status">You</div>
+                    <!-- My floating social icons -->
+                    <div class="floating-social local-social" id="mySocial">
+                        <a id="myInstaLink" href="#" target="_blank" style="display: none;" title="Instagram">
+                            <i class="material-icons">camera_alt</i>
+                        </a>
+                        <a id="myWhatsappLink" href="#" target="_blank" style="display: none;" title="WhatsApp">
+                            <i class="material-icons">chat</i>
+                        </a>
+                    </div>
                 </div>
             </section>
 
@@ -139,6 +154,10 @@
                 <div class="form-group">
                     <label>Instagram URL (Optional)</label>
                     <input type="url" id="myInsta" placeholder="https://instagram.com/yourhandle">
+                </div>
+                <div class="form-group">
+                    <label>WhatsApp Number (Optional, with country code)</label>
+                    <input type="text" id="myWhatsapp" placeholder="e.g. +1234567890">
                 </div>
                 <button id="saveSettingsBtn" class="btn primary">Save Changes</button>
             </div>
