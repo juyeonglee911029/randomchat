@@ -1,5 +1,5 @@
 import { auth, db, provider } from './firebase-config.js';
-import { signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { signInWithPopup, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { initMedia, findMatch, hangup } from './webrtc.js';
 import { sendChatMessage } from './chat.js';
@@ -51,14 +51,21 @@ async function init() {
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // User is signed in
-            googleLoginBtn.style.display = 'none';
-            userInfo.style.display = 'flex';
-            userName.textContent = user.displayName;
-            userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
-            
-            myInfo.name = user.displayName;
-            myInfo.photoUrl = user.photoURL;
+            if (user.isAnonymous) {
+                // Anonymous user
+                googleLoginBtn.style.display = 'flex';
+                userInfo.style.display = 'none';
+                myInfo.name = 'Anonymous';
+            } else {
+                // Google user is signed in
+                googleLoginBtn.style.display = 'none';
+                userInfo.style.display = 'flex';
+                userName.textContent = user.displayName;
+                userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
+                
+                myInfo.name = user.displayName;
+                myInfo.photoUrl = user.photoURL;
+            }
 
             // Save to Firestore
             const userRef = doc(db, 'users', user.uid);
@@ -74,9 +81,9 @@ async function init() {
                 await updateDoc(userRef, { online: true, lastSeen: Date.now() });
             } else {
                 await setDoc(userRef, {
-                    name: user.displayName,
-                    email: user.email,
-                    photoURL: user.photoURL,
+                    name: myInfo.name,
+                    email: user.email || '',
+                    photoURL: myInfo.photoUrl || '',
                     gender: 'unspecified',
                     prefGender: 'any',
                     insta: '',
@@ -89,8 +96,6 @@ async function init() {
             // Set disconnect hook for presence (best effort in Firestore without cloud functions)
             window.addEventListener('beforeunload', () => {
                 if (auth.currentUser) {
-                    // This is synchronous but fetch API keepalive is better, simple update here might fail, 
-                    // ideally we'd use Realtime DB for presence, but we'll do our best.
                     navigator.sendBeacon(`https://firestore.googleapis.com/v1/projects/${db.app.options.projectId}/databases/(default)/documents/users/${user.uid}?updateMask.fieldPaths=online`, 
                     JSON.stringify({ fields: { online: { booleanValue: false } } }));
                 }
@@ -98,10 +103,12 @@ async function init() {
 
             loadSettingsToUI();
         } else {
-            // User is signed out
-            googleLoginBtn.style.display = 'flex';
-            userInfo.style.display = 'none';
-            myInfo.name = 'Anonymous';
+            // User is completely signed out, sign in anonymously
+            try {
+                await signInAnonymously(auth);
+            } catch(e) {
+                console.error("Anonymous auth failed", e);
+            }
         }
     });
 
@@ -186,6 +193,8 @@ const callbacks = {
         remoteStatus.textContent = "Stranger has disconnected.";
         remoteStatus.style.display = 'block';
         partnerSocial.style.display = 'none';
+        const partnerInfoDiv = document.getElementById('partnerInfo');
+        if(partnerInfoDiv) partnerInfoDiv.style.display = 'none';
         hangupBtn.disabled = true;
         findMatchBtn.disabled = false;
         messageInput.disabled = true;
@@ -195,6 +204,16 @@ const callbacks = {
     },
     onMessage: (msg) => {
         addChatMessage(msg.text, msg.isMe);
+    },
+    onPartnerInfo: (info) => {
+        const partnerInfoDiv = document.getElementById('partnerInfo');
+        const partnerNameEl = document.getElementById('partnerName');
+        const partnerGenderEl = document.getElementById('partnerGender');
+        if(partnerInfoDiv) {
+            partnerInfoDiv.style.display = 'block';
+            partnerNameEl.textContent = info.name || 'Anonymous';
+            partnerGenderEl.textContent = info.gender || 'unspecified';
+        }
     },
     onPartnerSocial: (instaUrl) => {
         if (instaUrl) {

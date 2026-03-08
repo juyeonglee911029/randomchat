@@ -97,6 +97,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         await updateDoc(roomRef, {
             status: "joined",
             calleeGender: myInfo.gender,
+            calleeName: myInfo.name,
             calleeInsta: myInfo.insta
         });
 
@@ -105,6 +106,12 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         // Notify UI about partner social info
         const data = roomDoc.data();
         if(data.callerInsta) callbacks.onPartnerSocial(data.callerInsta);
+        if(callbacks.onPartnerInfo) {
+            callbacks.onPartnerInfo({
+                name: data.callerName || 'Anonymous',
+                gender: data.callerGender || 'unspecified'
+            });
+        }
 
         // Fetch Caller Offer
         const offer = data.offer;
@@ -140,6 +147,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             offer: { type: offer.type, sdp: offer.sdp },
             status: "waiting",
             callerGender: myInfo.gender,
+            callerName: myInfo.name,
             callerInsta: myInfo.insta,
             createdAt: Date.now()
         };
@@ -147,6 +155,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         await setDoc(roomRef, roomWithOffer);
         setupChat(roomId, callbacks.onMessage);
         
+        let partnerInfoFired = false;
         // Listen for Callee Answer
         unsubRoom = onSnapshot(roomRef, async snapshot => {
             const data = snapshot.data();
@@ -156,8 +165,15 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                 const rtcSessionDescription = new RTCSessionDescription(data.answer);
                 await peerConnection.setRemoteDescription(rtcSessionDescription);
             }
-            if (data.status === "joined" && data.calleeInsta) {
-                callbacks.onPartnerSocial(data.calleeInsta);
+            if (data.status === "joined") {
+                if (data.calleeInsta) callbacks.onPartnerSocial(data.calleeInsta);
+                if (!partnerInfoFired && callbacks.onPartnerInfo) {
+                    partnerInfoFired = true;
+                    callbacks.onPartnerInfo({
+                        name: data.calleeName || 'Anonymous',
+                        gender: data.calleeGender || 'unspecified'
+                    });
+                }
             }
         });
         
