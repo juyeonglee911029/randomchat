@@ -57,20 +57,82 @@ body {
     font-weight: 700;
 }
 
-.stats {
+.stats-container {
     display: flex;
-    gap: 15px;
-    font-size: 0.85rem;
-    color: var(--secondary);
+    gap: 20px;
     align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 16px;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.stat-badge {
-    background: rgba(3, 218, 198, 0.1);
-    padding: 4px 8px;
-    border-radius: 20px;
-    border: 1px solid rgba(3, 218, 198, 0.3);
-    white-space: nowrap;
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-item i {
+    color: var(--secondary);
+    font-size: 1.2rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: white;
+}
+
+.stat-item.online .stat-value {
+    color: var(--primary);
+}
+
+/* Pulsing dot for online status */
+.pulse-dot {
+    width: 10px;
+    height: 10px;
+    background-color: var(--primary);
+    border-radius: 50%;
+    position: relative;
+}
+
+.pulse-dot::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    animation: pulse 1.5s linear infinite;
+    opacity: 0;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
 }
 
 #google_translate_element select {
@@ -296,6 +358,23 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    /* Ensure it behaves well and allows smooth scrolling */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar for Chat */
+.chat-messages::-webkit-scrollbar {
+    width: 6px;
+}
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 10px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
 }
 
 .message {
@@ -470,10 +549,12 @@ body {
     .logo h1 {
         font-size: 1.2rem;
     }
-    .stats {
+    .stats-container {
         width: 100%;
         order: 3;
         justify-content: space-between;
+        padding: 8px 12px;
+        margin-top: 8px;
     }
     .main-content {
         flex-direction: column;

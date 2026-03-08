@@ -17,9 +17,21 @@
                 <h1 style="color: var(--primary); font-weight: 700; letter-spacing: 1px;">CYBERCHAT</h1>
             </div>
             
-            <div class="stats">
-                <span class="stat-badge">Total Users: <span id="totalUsers">0</span></span>
-                <span class="stat-badge" style="color: #FFD700; border-color: rgba(255, 215, 0, 0.3); background: rgba(255, 215, 0, 0.1);">Online Now: <span id="onlineUsers">0</span></span>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <i class="material-icons">people</i>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Users</span>
+                        <span class="stat-value" id="totalUsers">0</span>
+                    </div>
+                </div>
+                <div class="stat-item online">
+                    <div class="pulse-dot"></div>
+                    <div class="stat-info">
+                        <span class="stat-label">Online Now</span>
+                        <span class="stat-value" id="onlineUsers">0</span>
+                    </div>
+                </div>
                 <div id="google_translate_element"></div>
             </div>
 
