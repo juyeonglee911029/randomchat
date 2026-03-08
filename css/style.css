@@ -477,27 +477,6 @@ body {
     justify-content: center;
 }
 
-/* Ad Bottom (Made smaller) */
-.ad-bottom {
-    width: 100%;
-    background-color: var(--bg-panel);
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 2px 0;
-    min-height: 50px; 
-    max-height: 60px;
-    z-index: 10;
-    overflow: hidden;
-}
-.ad-container-bottom {
-    width: 100%;
-    max-width: 900px;
-    height: 100%;
-    overflow: hidden;
-}
-
 /* Modal styling */
 .modal {
     display: none;
@@ -627,10 +606,6 @@ body {
     
     .local-wrapper:hover {
         width: 150px;
-    }
-    
-    .ad-bottom {
-        min-height: 50px;
     }
     
     /* Prevent iOS zoom on focus */
