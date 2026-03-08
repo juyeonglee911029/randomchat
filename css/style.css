@@ -99,14 +99,10 @@ body {
 
 .stats-container {
     display: flex;
-    gap: 20px;
+    gap: 25px; /* Slightly more gap for clarity since background is gone */
     align-items: center;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 6px 16px;
-    border-radius: 30px;
-    border: none; /* Removed border as requested */
     margin-left: auto; /* Push it to the right */
-    margin-right: 20px; /* Give some space between stats and controls */
+    margin-right: 25px; /* Give space before controls */
 }
 
 .stat-item {
