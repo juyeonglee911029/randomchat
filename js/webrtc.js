@@ -35,6 +35,17 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         await hangup();
     }
     
+    if (!localStream) {
+        callbacks.onStatus("Requesting camera access...");
+        const localVideoElement = document.getElementById('localVideo');
+        const success = await initMedia(localVideoElement);
+        if (!success) {
+            callbacks.onStatus("Camera permission required to match.");
+            callbacks.onDisconnect();
+            return;
+        }
+    }
+    
     callbacks.onStatus("Searching for a stranger...");
     
     // 1. Check for waiting rooms
