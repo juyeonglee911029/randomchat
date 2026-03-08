@@ -186,13 +186,30 @@ export async function hangup() {
     if (roomId) {
         stopChat();
         if (roomRef) {
-            // Cleanup room if we are caller and waiting, or just general cleanup
             try {
-                // If we are disconnecting, we might want to let the cloud function clean it up,
-                // but for simplicity we can try to delete it here or update status to "closed"
-                await updateDoc(roomRef, { status: "closed" });
+                // Delete messages subcollection
+                const messagesRef = collection(roomRef, "messages");
+                const messagesSnap = await getDocs(messagesRef);
+                messagesSnap.forEach((docSnap) => {
+                    deleteDoc(docSnap.ref);
+                });
+                
+                // Delete caller candidates
+                const callerCandidates = await getDocs(collection(roomRef, 'callerCandidates'));
+                callerCandidates.forEach((docSnap) => {
+                    deleteDoc(docSnap.ref);
+                });
+                
+                // Delete callee candidates
+                const calleeCandidates = await getDocs(collection(roomRef, 'calleeCandidates'));
+                calleeCandidates.forEach((docSnap) => {
+                    deleteDoc(docSnap.ref);
+                });
+
+                // Finally delete the room document itself
+                await deleteDoc(roomRef);
             } catch (e) {
-                // Document might already be deleted
+                console.error("Error during room cleanup:", e);
             }
         }
         roomId = null;

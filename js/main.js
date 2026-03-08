@@ -120,11 +120,15 @@ async function init() {
 
 // Google Login
 googleLoginBtn.addEventListener('click', async () => {
+    if (window.location.protocol === 'file:') {
+        alert("Authentication Error:\nYou are opening this file directly (file://). Firebase Auth requires a web server (http://localhost or https://). Please run a local server or use Firebase Hosting.");
+        return;
+    }
     try {
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login Error:", error);
-        alert("Google Login Failed: " + error.message + "\n\nPlease ensure Google Sign-In is enabled in your Firebase Authentication settings and your domain is whitelisted.");
+        alert("Google Login Failed.\nError: " + error.message + "\n\n1. Ensure Google Sign-In is enabled in Firebase Authentication.\n2. Ensure your current domain (" + window.location.hostname + ") is added to the 'Authorized domains' list in the Firebase Console Settings.");
     }
 });
 
