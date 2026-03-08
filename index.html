@@ -1,14 +1,100 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Video Chat</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+    <div class="app-container">
+        <!-- Header / Controls -->
+        <header class="header">
+            <div class="logo">
+                <i class="material-icons">videocam</i>
+                <h1>RandomChat</h1>
+            </div>
+            <div class="controls">
+                <button id="findMatchBtn" class="btn primary">
+                    <i class="material-icons">shuffle</i>
+                    Find Stranger
+                </button>
+                <button id="hangupBtn" class="btn danger" disabled>
+                    <i class="material-icons">call_end</i>
+                    Stop
+                </button>
+                <button id="settingsBtn" class="btn secondary">
+                    <i class="material-icons">settings</i>
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Video Area -->
+            <section class="video-container">
+                <div class="video-wrapper remote-wrapper">
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <div id="remoteStatus" class="video-status">Waiting for partner...</div>
+                    <div class="social-links" id="partnerSocial" style="display: none;">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                
+                <div class="video-wrapper local-wrapper">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="video-status">You</div>
+                </div>
+            </section>
+
+            <!-- Chat Area -->
+            <aside class="chat-container">
+                <div class="chat-header">
+                    <h2>Chat</h2>
+                </div>
+                <div id="chatMessages" class="chat-messages">
+                    <div class="system-message">Welcome to RandomChat. Click "Find Stranger" to start.</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+                    <button id="sendBtn" class="btn primary" disabled>
+                        <i class="material-icons">send</i>
+                    </button>
+                </div>
+            </aside>
+        </main>
+        
+        <!-- Settings Modal (Hidden by default) -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2>Settings</h2>
+                <div class="form-group">
+                    <label>Match Preference (Gender)</label>
+                    <select id="prefGender">
+                        <option value="any">Any</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>My Gender</label>
+                    <select id="myGender">
+                        <option value="unspecified">Unspecified</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Instagram URL (Optional)</label>
+                    <input type="url" id="myInsta" placeholder="https://instagram.com/yourhandle">
+                </div>
+                <button id="saveSettingsBtn" class="btn primary">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK (ES Modules loaded directly in JS) -->
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
