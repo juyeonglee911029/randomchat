@@ -175,11 +175,11 @@ body {
 .local-wrapper {
     position: absolute;
     bottom: 20px;
-    left: 20px;
+    left: 0;
     width: 160px; /* Reduced from 180px for better fit */
     aspect-ratio: 4/3;
     border: 3px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 0 8px 8px 0; /* Only right corners rounded */
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
     background-color: #222;
@@ -368,9 +368,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 5px 0;
-    min-height: 60px; /* Reduced from 90px */
-    max-height: 80px;
+    padding: 2px 0;
+    min-height: 50px; 
+    max-height: 60px;
     z-index: 10;
     overflow: hidden;
 }
@@ -499,7 +499,8 @@ body {
     .local-wrapper {
         width: 100px;
         bottom: 10px;
-        left: 10px;
+        left: 0;
+        border-radius: 0 4px 4px 0;
     }
     
     .local-wrapper:hover {
