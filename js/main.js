@@ -16,7 +16,7 @@ const closeBtn = document.querySelector('.close-btn');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
-const chatMessages = document.getElementById('chatMessages');
+const chatMessagesInner = document.getElementById('chatMessagesInner');
 const remoteStatus = document.getElementById('remoteStatus');
 const partnerSocial = document.getElementById('partnerSocial');
 
@@ -235,7 +235,7 @@ const callbacks = {
 findMatchBtn.addEventListener('click', async () => {
     findMatchBtn.disabled = true;
     hangupBtn.disabled = false;
-    chatMessages.innerHTML = '';
+    chatMessagesInner.innerHTML = '';
     partnerSocial.style.display = 'none';
     addSystemMessage("Searching for a stranger...");
     await findMatch(remoteVideo, myInfo, callbacks);
@@ -255,16 +255,16 @@ function addSystemMessage(text) {
     const div = document.createElement('div');
     div.className = 'system-message';
     div.textContent = text;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatMessagesInner.appendChild(div);
+    chatMessagesInner.scrollTop = chatMessagesInner.scrollHeight;
 }
 
 function addChatMessage(text, isMe) {
     const div = document.createElement('div');
     div.className = `message ${isMe ? 'me' : 'them'}`;
     div.textContent = text;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    chatMessagesInner.appendChild(div);
+    chatMessagesInner.scrollTop = chatMessagesInner.scrollHeight;
 }
 
 async function handleSend() {

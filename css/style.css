@@ -65,6 +65,8 @@ body {
     padding: 6px 16px;
     border-radius: 30px;
     border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-left: auto; /* Push it to the right */
+    margin-right: 20px; /* Give some space between stats and controls */
 }
 
 .stat-item {
@@ -138,11 +140,31 @@ body {
 #google_translate_element select {
     background-color: var(--bg-dark);
     color: white;
-    border: 1px solid var(--border-color);
+    border: none;
     padding: 2px;
     border-radius: 4px;
     font-family: 'Poppins', sans-serif;
     font-size: 0.8rem;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Hide Google Translate "Powered by" and borders */
+.goog-te-gadget .goog-te-combo {
+    margin: 0 !important;
+}
+.goog-te-gadget {
+    font-size: 0px !important; 
+    color: transparent !important;
+}
+.goog-logo-link, .goog-logo-link:link, .goog-logo-link:visited, .goog-logo-link:hover, .goog-logo-link:active {
+    display: none !important;
+}
+.goog-te-banner-frame.skiptranslate {
+    display: none !important;
+}
+body {
+    top: 0px !important; 
 }
 
 .controls {
@@ -355,6 +377,15 @@ body {
 
 .chat-messages {
     flex: 1; /* Take remaining space */
+    position: relative; /* Setup absolute inner wrapper */
+}
+
+.chat-messages-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     padding: 0.8rem;
     overflow-y: auto; /* Scroll internally */
     display: flex;
@@ -362,28 +393,25 @@ body {
     gap: 8px;
     /* Ensure it behaves well and allows smooth scrolling */
     -webkit-overflow-scrolling: touch;
-    height: 0; /* Important hack to force flex container to scroll instead of expanding */
 }
 
-.chat-messages::after {
+.chat-messages-inner::after {
     content: '';
     display: block;
-    min-height: 250px; /* Force minimum empty space so the area is always at least 10 lines tall */
+    min-height: 280px; /* ~12 lines of fixed space to prevent shrinking when empty */
     flex-shrink: 0;
 }
-
-/* Custom Scrollbar for Chat */
-.chat-messages::-webkit-scrollbar {
+.chat-messages-inner::-webkit-scrollbar {
     width: 6px;
 }
-.chat-messages::-webkit-scrollbar-track {
+.chat-messages-inner::-webkit-scrollbar-track {
     background: transparent;
 }
-.chat-messages::-webkit-scrollbar-thumb {
+.chat-messages-inner::-webkit-scrollbar-thumb {
     background: #555;
     border-radius: 10px;
 }
-.chat-messages::-webkit-scrollbar-thumb:hover {
+.chat-messages-inner::-webkit-scrollbar-thumb:hover {
     background: var(--primary);
 }
 
