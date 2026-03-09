@@ -83,18 +83,66 @@ body {
 }
 
 .logo-icon {
-    color: #000;
+    display: none; /* Hide old icon */
+}
+
+.logo-emoji {
     font-size: 1.6rem;
 }
 
-.logo-text {
-    font-size: 1.6rem;
+.video-logo-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 15px;
+    border-radius: 30px;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.video-logo-overlay .logo-emoji {
+    font-size: 1.4rem;
+}
+
+.video-logo-overlay .logo-text {
+    font-size: 1.2rem;
     font-weight: 900;
     color: var(--primary);
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    margin: 0;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.partner-insta-display {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(255, 215, 0, 0.3); /* Semi-transparent yellow */
+    padding: 5px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    backdrop-filter: blur(4px);
+    z-index: 5;
+    border: 1px solid rgba(255, 215, 0, 0.4);
+}
+
+.insta-logo-small {
+    width: 16px;
+    height: 16px;
+}
+
+#partnerInstaId {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
 .stats-container {

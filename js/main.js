@@ -35,7 +35,8 @@ let myInfo = {
     insta: '',
     whatsapp: '',
     name: 'Anonymous',
-    photoUrl: ''
+    photoUrl: '',
+    showInfo: true
 };
 
 // State
@@ -79,6 +80,7 @@ async function init() {
                     myInfo.prefGender = data.prefGender || 'any';
                     myInfo.insta = data.insta || '';
                     myInfo.whatsapp = data.whatsapp || '';
+                    myInfo.showInfo = data.showInfo !== undefined ? data.showInfo : true;
                     
                     // Keep presence
                     await updateDoc(userRef, { online: true, lastSeen: Date.now() });
@@ -91,6 +93,7 @@ async function init() {
                         prefGender: 'any',
                         insta: '',
                         whatsapp: '',
+                        showInfo: true,
                         online: true,
                         createdAt: Date.now(),
                         lastSeen: Date.now()
@@ -164,6 +167,7 @@ function loadSettingsToUI() {
     document.getElementById('prefGender').value = myInfo.prefGender;
     document.getElementById('myInsta').value = myInfo.insta;
     document.getElementById('myWhatsapp').value = myInfo.whatsapp;
+    document.getElementById('showInfo').checked = myInfo.showInfo;
     
     updateLocalSocialIcons();
 }
@@ -172,6 +176,7 @@ async function saveSettings() {
     myInfo.prefGender = document.getElementById('prefGender').value;
     myInfo.insta = document.getElementById('myInsta').value;
     myInfo.whatsapp = document.getElementById('myWhatsapp').value;
+    myInfo.showInfo = document.getElementById('showInfo').checked;
     
     updateLocalSocialIcons();
     
@@ -179,7 +184,8 @@ async function saveSettings() {
         await updateDoc(doc(db, 'users', auth.currentUser.uid), {
             prefGender: myInfo.prefGender,
             insta: myInfo.insta,
-            whatsapp: myInfo.whatsapp
+            whatsapp: myInfo.whatsapp,
+            showInfo: myInfo.showInfo
         });
     }
     
@@ -191,7 +197,8 @@ function updateLocalSocialIcons() {
     const waLink = document.getElementById('myWhatsappLink');
     
     if(myInfo.insta) {
-        instaLink.href = myInfo.insta;
+        // Now using ID, link to profile
+        instaLink.href = `https://instagram.com/${myInfo.insta}`;
         instaLink.style.display = 'flex';
     } else {
         instaLink.style.display = 'none';
@@ -230,6 +237,10 @@ const callbacks = {
         partnerSocial.style.display = 'none';
         const partnerInfoDiv = document.getElementById('partnerInfo');
         if(partnerInfoDiv) partnerInfoDiv.style.display = 'none';
+        
+        const partnerInstaDisplay = document.getElementById('partnerInstaDisplay');
+        if(partnerInstaDisplay) partnerInstaDisplay.style.display = 'none';
+        
         hangupBtn.disabled = true;
         findMatchBtn.disabled = false;
         messageInput.disabled = true;
@@ -250,19 +261,29 @@ const callbacks = {
             partnerGenderEl.textContent = info.gender || 'unspecified';
         }
     },
-    onPartnerSocial: (instaUrl, whatsappNum) => {
+    onPartnerSocial: (instaId, whatsappNum) => {
         const partnerSocialDiv = document.getElementById('partnerSocial');
         const partnerInstaLink = document.getElementById('partnerInstaLink');
         const partnerWaLink = document.getElementById('partnerWhatsappLink');
+        const partnerInstaDisplay = document.getElementById('partnerInstaDisplay');
+        const partnerInstaIdSpan = document.getElementById('partnerInstaId');
         
         let hasSocial = false;
         
-        if (instaUrl) {
-            partnerInstaLink.href = instaUrl;
+        if (instaId) {
+            partnerInstaLink.href = `https://instagram.com/${instaId}`;
             partnerInstaLink.style.display = 'flex';
+            
+            // Show in chat window as requested
+            if (partnerInstaDisplay) {
+                partnerInstaDisplay.style.display = 'flex';
+                partnerInstaIdSpan.textContent = instaId;
+            }
+            
             hasSocial = true;
         } else {
             partnerInstaLink.style.display = 'none';
+            if (partnerInstaDisplay) partnerInstaDisplay.style.display = 'none';
         }
         
         if (whatsappNum) {

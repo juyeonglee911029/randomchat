@@ -111,8 +111,8 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             status: "joined",
             calleeGender: myInfo.gender || 'unspecified',
             calleeName: myInfo.name || 'Anonymous',
-            calleeInsta: myInfo.insta || '',
-            calleeWhatsapp: myInfo.whatsapp || ''
+            calleeInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
+            calleeWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : ''
         });
 
         // Add pending local candidates for Callee
@@ -184,8 +184,8 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             status: "waiting",
             callerGender: myInfo.gender || 'unspecified',
             callerName: myInfo.name || 'Anonymous',
-            callerInsta: myInfo.insta || '',
-            callerWhatsapp: myInfo.whatsapp || '',
+            callerInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
+            callerWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : '',
             createdAt: Date.now()
         };
         

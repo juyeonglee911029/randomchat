@@ -14,7 +14,7 @@
         <header class="header animated-header">
             <div class="logo">
                 <div class="logo-icon-wrapper">
-                    <i class="material-icons logo-icon">group_work</i>
+                    <span class="logo-emoji">📹</span>
                 </div>
                 <h1 class="logo-text">YELLOWCHAT</h1>
             </div>
@@ -81,6 +81,11 @@
 
             <!-- Video Area -->
             <section class="video-container">
+                <div class="video-logo-overlay">
+                    <span class="logo-emoji">📹</span>
+                    <span class="logo-text">YELLOWCHAT</span>
+                </div>
+
                 <div class="video-wrapper remote-wrapper">
                     <video id="remoteVideo" autoplay playsinline></video>
                     <div id="remoteStatus" class="video-status">Waiting for partner...</div>
@@ -122,6 +127,11 @@
                     <div class="chat-messages-inner" id="chatMessagesInner">
                         <div class="system-message">Welcome to YELLOWCHAT. Click "Find Stranger" to start.</div>
                     </div>
+                    <!-- Partner Instagram Display -->
+                    <div id="partnerInstaDisplay" class="partner-insta-display" style="display: none;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" alt="Insta" class="insta-logo-small">
+                        <span id="partnerInstaId"></span>
+                    </div>
                 </div>
                 <div class="chat-input-area">
                     <input type="text" id="messageInput" placeholder="Type a message..." disabled>
@@ -154,12 +164,16 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Instagram URL (Optional)</label>
-                    <input type="url" id="myInsta" placeholder="https://instagram.com/yourhandle">
+                    <label>Instagram ID (Optional)</label>
+                    <input type="text" id="myInsta" placeholder="your_id">
                 </div>
                 <div class="form-group">
                     <label>WhatsApp Number (Optional, with country code)</label>
                     <input type="text" id="myWhatsapp" placeholder="e.g. +1234567890">
+                </div>
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                    <label style="margin: 0;">Show registered info to partner</label>
+                    <input type="checkbox" id="showInfo" checked>
                 </div>
                 <button id="saveSettingsBtn" class="btn primary">Save Changes</button>
             </div>
