@@ -22,33 +22,34 @@
                     <h1 class="logo-text"><span class="yellow">YELLOW</span><span class="chat">CHAT</span></h1>
                 </div>
 
-                <div class="auth-container">
-                    <div class="auth-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                        <button id="googleLoginBtn" class="btn secondary">
-                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
-                            Login
-                        </button>
-                        <div id="userInfo" style="display: none; align-items: center; gap: 10px;">
-                            <span id="userName" style="font-weight: bold; color: white; font-size: 0.9rem;"></span>
-                            <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);">
+                <div class="header-right">
+                    <div class="auth-container">
+                        <div class="auth-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                            <button id="googleLoginBtn" class="btn secondary">
+                                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
+                                Login
+                            </button>
+                            <div id="userInfo" style="display: none; align-items: center; gap: 10px;">
+                                <span id="userName" style="font-weight: bold; color: white; font-size: 0.9rem;"></span>
+                                <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);">
+                            </div>
                         </div>
-                        <div id="google_translate_element"></div>
+                    </div>
+
+                    <div class="controls">
+                        <button id="findMatchBtn" class="btn primary">
+                            <i class="material-icons">shuffle</i>
+                            <span class="btn-text">Find Stranger</span>
+                        </button>
+                        <button id="hangupBtn" class="btn danger" disabled>
+                            <i class="material-icons">call_end</i>
+                            <span class="btn-text">Stop</span>
+                        </button>
+                        <button id="settingsBtn" class="btn secondary">
+                            <i class="material-icons">settings</i>
+                        </button>
                     </div>
                 </div>
-            </div>
-            
-            <div class="controls">
-                <button id="findMatchBtn" class="btn primary">
-                    <i class="material-icons">shuffle</i>
-                    Find Stranger
-                </button>
-                <button id="hangupBtn" class="btn danger" disabled>
-                    <i class="material-icons">call_end</i>
-                    Stop
-                </button>
-                <button id="settingsBtn" class="btn secondary">
-                    <i class="material-icons">settings</i>
-                </button>
             </div>
         </header>
 
@@ -216,17 +217,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Google Translate Script -->
-    <script type="text/javascript">
-    function googleTranslateElementInit() {
-      new google.translate.TranslateElement({
-        pageLanguage: 'en', 
-        includedLanguages: 'en,zh-CN,hi,es,fr,ar,bn,pt,ru,ur,id,de,ja,mr,te,tr,ta,ko,vi,it'
-      }, 'google_translate_element');
-    }
-    </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- Firebase SDK (ES Modules loaded directly in JS) -->
     <script type="module" src="js/main.js"></script>
