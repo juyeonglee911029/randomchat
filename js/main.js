@@ -248,6 +248,46 @@ function updateLocalSocialIcons() {
 }
 
 // Callbacks for WebRTC/Chat
+let autoMatchInterval = null;
+
+function startAutoMatching() {
+    if (autoMatchInterval) return;
+    
+    document.getElementById('matchingOverlay').style.display = 'flex';
+    
+    const attemptMatch = async () => {
+        if (isMatched) {
+            stopAutoMatching();
+            return;
+        }
+        // If not matched, we trigger findMatch
+        // findMatch itself handles the "Searching..." state
+        await findMatch(remoteVideo, myInfo, callbacks);
+    };
+
+    // Initial attempt
+    attemptMatch();
+
+    autoMatchInterval = setInterval(async () => {
+        if (!isMatched) {
+            console.log("Auto-retrying match...");
+            // We don't need to call hangup here because findMatch(remoteVideo, myInfo, callbacks) 
+            // inside webrtc.js already calls hangup() if peerConnection exists.
+            await attemptMatch();
+        } else {
+            stopAutoMatching();
+        }
+    }, 4000);
+}
+
+function stopAutoMatching() {
+    if (autoMatchInterval) {
+        clearInterval(autoMatchInterval);
+        autoMatchInterval = null;
+    }
+    document.getElementById('matchingOverlay').style.display = 'none';
+}
+
 const callbacks = {
     onStatus: (msg) => {
         remoteStatus.textContent = msg;
@@ -255,6 +295,16 @@ const callbacks = {
         if (msg === "Connected!") {
             remoteStatus.style.display = 'none';
             isMatched = true;
+            stopAutoMatching();
+            
+            // Trigger connection animation (logo passing through)
+            const transitionOverlay = document.getElementById('transitionOverlay');
+            transitionOverlay.style.display = 'flex';
+            // Animation lasts 1.5s as per CSS
+            setTimeout(() => {
+                transitionOverlay.style.display = 'none';
+            }, 1500);
+
             hangupBtn.disabled = false;
             findMatchBtn.disabled = true;
             messageInput.disabled = false;
@@ -264,6 +314,7 @@ const callbacks = {
     },
     onDisconnect: () => {
         isMatched = false;
+        stopAutoMatching();
         remoteVideo.srcObject = null;
         remoteStatus.textContent = "Stranger has disconnected.";
         remoteStatus.style.display = 'block';
@@ -325,10 +376,12 @@ findMatchBtn.addEventListener('click', async () => {
     chatMessagesInner.innerHTML = '';
     partnerSocial.style.display = 'none';
     addSystemMessage("Searching for a stranger...");
-    await findMatch(remoteVideo, myInfo, callbacks);
+    
+    startAutoMatching();
 });
 
 hangupBtn.addEventListener('click', () => {
+    stopAutoMatching();
     hangup();
     callbacks.onDisconnect();
 });

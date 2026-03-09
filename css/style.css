@@ -612,25 +612,64 @@ body {
     
     .controls {
         gap: 5px;
+        flex: 1;
+        justify-content: flex-end;
     }
     .btn {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.8rem;
+        padding: 0.4rem 0.5rem;
+        font-size: calc(0.8rem - 2px);
         border-radius: 4px;
+        flex: 1;
+        justify-content: center;
+        min-width: 0;
+        white-space: nowrap;
     }
-    
+
+    .header {
+        padding: 0.4rem 0.6rem;
+        gap: 5px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+    .header .logo-text {
+        font-size: calc(1rem - 2px);
+        font-weight: 500;
+    }
+    .header .logo-icon-wrapper {
+        width: 28px;
+        height: 28px;
+    }
+
     .main-content {
         flex-direction: column;
         height: calc(100% - 110px); /* Adjust based on header size */
     }
-    
+
     .ad-sidebar { display: none; }
 
     .video-container {
         flex: 1;
         min-height: 200px;
     }
-    
+
+    .video-logo-overlay .logo-text {
+        font-size: 0.85rem;
+    }
+
+    .partner-info {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+    .partner-insta-overlay .social-svg-icon {
+        width: 27px;
+        height: 27px;
+    }
+
+    .floating-social .social-svg-icon {
+        width: 33px;
+        height: 33px;
+    }
+
     .chat-container {
         flex: 1.2;
         width: 100%;
@@ -639,25 +678,98 @@ body {
         border-left: none;
         border-top: 1px solid var(--border-color);
     }
-    
+
     .chat-header { padding: 0.5rem; }
     .chat-header h2 { font-size: 1rem; }
-    
+
     .local-wrapper {
         width: 120px;
         bottom: 10px;
         left: 10px;
         border-radius: 8px;
     }
-    
+
     .local-wrapper:hover { width: 180px; }
-    
-    #messageInput { font-size: 16px; padding: 0.5rem 0.8rem; }
-    #sendBtn { width: 40px; height: 40px; }
-    
+
+    #messageInput { font-size: 16px; padding: 0.5rem 0.8rem; flex: 1; min-width: 0; }
+    #sendBtn { width: 40px; height: 40px; flex-shrink: 0; }
+
     .modal-content {
         padding: 1.5rem;
         width: 95%;
     }
     .modal-content h2 { font-size: 1.4rem; }
-}
+    }
+
+    /* New Animations & Overlays */
+    .matching-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    }
+
+    .matching-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    }
+
+    .rotating-logo {
+    width: 80px;
+    height: 80px;
+    color: var(--primary);
+    animation: rotate360 2s linear infinite;
+    }
+
+    @keyframes rotate360 {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+    }
+
+    .matching-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 2px;
+    }
+
+    .transition-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 300;
+    animation: transitionFadeOut 1.5s ease-in-out forwards;
+    }
+
+    .transition-logo-wrapper {
+    width: 120px;
+    height: 120px;
+    color: var(--primary);
+    animation: logoZoomPass 1.5s ease-in-out forwards;
+    }
+
+    @keyframes transitionFadeOut {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; visibility: hidden; }
+    }
+
+    @keyframes logoZoomPass {
+    0% { transform: scale(0.1) translateZ(0); opacity: 0; }
+    50% { transform: scale(1.5) translateZ(0); opacity: 1; }
+    100% { transform: scale(10) translateZ(0); opacity: 0; }
+    }
