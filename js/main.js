@@ -269,7 +269,6 @@ const callbacks = {
         remoteStatus.style.display = 'block';
         partnerSocial.style.display = 'none';
         document.getElementById('partnerInfo').style.display = 'none';
-        document.getElementById('partnerInstaDisplay').style.display = 'none';
         
         hangupBtn.disabled = true;
         findMatchBtn.disabled = false;
@@ -286,8 +285,6 @@ const callbacks = {
         const partnerSocialDiv = document.getElementById('partnerSocial');
         const partnerInstaLink = document.getElementById('partnerInstaLink');
         const partnerWaLink = document.getElementById('partnerWhatsappLink');
-        const partnerInstaDisplay = document.getElementById('partnerInstaDisplay');
-        const partnerInstaIdSpan = document.getElementById('partnerInstaId');
         
         const partnerInfoDiv = document.getElementById('partnerInfo');
         const partnerInstaIdTop = document.getElementById('partnerInstaIdTop');
@@ -296,10 +293,6 @@ const callbacks = {
         if (instaId) {
             partnerInstaLink.href = `https://instagram.com/${instaId}`;
             partnerInstaLink.style.display = 'flex';
-            if (partnerInstaDisplay) {
-                partnerInstaDisplay.style.display = 'flex';
-                partnerInstaIdSpan.textContent = instaId;
-            }
             if (partnerInfoDiv && partnerInstaIdTop) {
                 partnerInfoDiv.style.display = 'block';
                 partnerInstaIdTop.textContent = instaId;
@@ -307,7 +300,6 @@ const callbacks = {
             hasSocial = true;
         } else {
             partnerInstaLink.style.display = 'none';
-            if (partnerInstaDisplay) partnerInstaDisplay.style.display = 'none';
             if (partnerInfoDiv) partnerInfoDiv.style.display = 'none';
         }
         
