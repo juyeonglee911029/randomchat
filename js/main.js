@@ -19,6 +19,8 @@ const sendBtn = document.getElementById('sendBtn');
 const chatMessagesInner = document.getElementById('chatMessagesInner');
 const remoteStatus = document.getElementById('remoteStatus');
 const partnerSocial = document.getElementById('partnerSocial');
+const matchingOverlay = document.getElementById('matchingOverlay');
+const transitionOverlay = document.getElementById('transitionOverlay');
 
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const userInfo = document.getElementById('userInfo');
@@ -47,6 +49,7 @@ let myInfo = {
 
 // State
 let isMatched = false;
+let autoMatchInterval = null;
 
 // Initialization
 async function init() {
@@ -247,32 +250,27 @@ function updateLocalSocialIcons() {
     }
 }
 
-// Callbacks for WebRTC/Chat
-let autoMatchInterval = null;
-
-function startAutoMatching() {
+// Auto Matching Logic
+async function startAutoMatching() {
     if (autoMatchInterval) return;
     
-    document.getElementById('matchingOverlay').style.display = 'flex';
+    matchingOverlay.style.display = 'flex';
     
     const attemptMatch = async () => {
         if (isMatched) {
             stopAutoMatching();
             return;
         }
-        // If not matched, we trigger findMatch
-        // findMatch itself handles the "Searching..." state
         await findMatch(remoteVideo, myInfo, callbacks);
     };
 
     // Initial attempt
-    attemptMatch();
+    await attemptMatch();
 
     autoMatchInterval = setInterval(async () => {
         if (!isMatched) {
-            console.log("Auto-retrying match...");
-            // We don't need to call hangup here because findMatch(remoteVideo, myInfo, callbacks) 
-            // inside webrtc.js already calls hangup() if peerConnection exists.
+            console.log("Retrying match every 4 seconds...");
+            await hangup();
             await attemptMatch();
         } else {
             stopAutoMatching();
@@ -285,9 +283,10 @@ function stopAutoMatching() {
         clearInterval(autoMatchInterval);
         autoMatchInterval = null;
     }
-    document.getElementById('matchingOverlay').style.display = 'none';
+    matchingOverlay.style.display = 'none';
 }
 
+// Callbacks for WebRTC/Chat
 const callbacks = {
     onStatus: (msg) => {
         remoteStatus.textContent = msg;
@@ -297,10 +296,8 @@ const callbacks = {
             isMatched = true;
             stopAutoMatching();
             
-            // Trigger connection animation (logo passing through)
-            const transitionOverlay = document.getElementById('transitionOverlay');
+            // Trigger connection animation
             transitionOverlay.style.display = 'flex';
-            // Animation lasts 1.5s as per CSS
             setTimeout(() => {
                 transitionOverlay.style.display = 'none';
             }, 1500);
@@ -376,8 +373,7 @@ findMatchBtn.addEventListener('click', async () => {
     chatMessagesInner.innerHTML = '';
     partnerSocial.style.display = 'none';
     addSystemMessage("Searching for a stranger...");
-    
-    startAutoMatching();
+    await startAutoMatching();
 });
 
 hangupBtn.addEventListener('click', () => {
