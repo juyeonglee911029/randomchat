@@ -63,18 +63,16 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     
     peerConnection = new RTCPeerConnection(configuration);
     
-    // Track pending candidates to avoid adding them before remote description
-    const pendingCandidates = [];
+    const pendingLocalCandidates = [];
+    const remoteCandidatesQueue = [];
 
     peerConnection.addEventListener('icecandidate', event => {
         if (!event.candidate) { return; }
-        // Ensure roomRef is ready before adding candidate to DB
         if (roomRef) {
             const candidatesCollection = isCaller ? 'callerCandidates' : 'calleeCandidates';
             addDoc(collection(roomRef, candidatesCollection), event.candidate.toJSON());
         } else {
-            // If roomRef not ready yet (Caller case), we'll add them after setting the doc
-            pendingCandidates.push(event.candidate);
+            pendingLocalCandidates.push(event.candidate);
         }
     });
 
@@ -88,15 +86,18 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         if (event.streams && event.streams[0]) {
             remoteVideoElement.srcObject = event.streams[0];
             remoteStream = event.streams[0];
+            remoteVideoElement.play().catch(e => console.warn("Remote video play failed:", e));
             callbacks.onStatus("Connected!");
         }
     });
     
     peerConnection.addEventListener('connectionstatechange', event => {
         console.log("Connection state:", peerConnection.connectionState);
-        if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
+        if (peerConnection.connectionState === 'failed') {
             callbacks.onDisconnect();
             hangup();
+        } else if (peerConnection.connectionState === 'disconnected') {
+            callbacks.onStatus("Reconnecting...");
         }
     });
 
@@ -114,6 +115,12 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             calleeWhatsapp: myInfo.whatsapp || ''
         });
 
+        // Add pending local candidates for Callee
+        pendingLocalCandidates.forEach(candidate => {
+            addDoc(collection(roomRef, 'calleeCandidates'), candidate.toJSON());
+        });
+        pendingLocalCandidates.length = 0;
+
         setupChat(roomId, callbacks.onMessage);
         
         const data = roomDoc.data();
@@ -130,17 +137,33 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         const offer = data.offer;
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
         
+        while (remoteCandidatesQueue.length > 0) {
+            const candidate = remoteCandidatesQueue.shift();
+            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         
         await updateDoc(roomRef, { answer: { type: answer.type, sdp: answer.sdp } });
         
+        unsubRoom = onSnapshot(roomRef, snapshot => {
+            if (!snapshot.exists()) {
+                callbacks.onDisconnect();
+                hangup();
+            }
+        });
+
         unsubCallerCandidates = onSnapshot(collection(roomRef, 'callerCandidates'), snapshot => {
             snapshot.docChanges().forEach(async change => {
                 if (change.type === 'added') {
                     let candidateData = change.doc.data();
                     try {
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
+                        if (peerConnection.remoteDescription) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
+                        } else {
+                            remoteCandidatesQueue.push(candidateData);
+                        }
                     } catch (e) {
                         console.error("Error adding received ice candidate", e);
                     }
@@ -168,23 +191,30 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         
         await setDoc(roomRef, roomWithOffer);
         
-        // Now that roomRef is set, add any pending candidates
-        const candidatesCollection = 'callerCandidates';
-        pendingCandidates.forEach(candidate => {
-            addDoc(collection(roomRef, candidatesCollection), candidate.toJSON());
+        pendingLocalCandidates.forEach(candidate => {
+            addDoc(collection(roomRef, 'callerCandidates'), candidate.toJSON());
         });
-        pendingCandidates.length = 0;
+        pendingLocalCandidates.length = 0;
 
         setupChat(roomId, callbacks.onMessage);
         
         let partnerInfoFired = false;
         unsubRoom = onSnapshot(roomRef, async snapshot => {
             const data = snapshot.data();
-            if (!data) return;
+            if (!data) {
+                callbacks.onDisconnect();
+                hangup();
+                return;
+            }
             
             if (!peerConnection.currentRemoteDescription && data.answer) {
                 const rtcSessionDescription = new RTCSessionDescription(data.answer);
                 await peerConnection.setRemoteDescription(rtcSessionDescription);
+                
+                while (remoteCandidatesQueue.length > 0) {
+                    const candidate = remoteCandidatesQueue.shift();
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                }
             }
             if (data.status === "joined") {
                 if (callbacks.onPartnerSocial) {
@@ -208,8 +238,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                         if (peerConnection.remoteDescription) {
                             await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
                         } else {
-                            // Rare case where candidate arrives before answer is processed locally
-                            console.warn("Received candidate before remote description, skipping for now.");
+                            remoteCandidatesQueue.push(candidateData);
                         }
                     } catch (e) {
                         console.error("Error adding received ice candidate", e);
@@ -234,27 +263,26 @@ export async function hangup() {
         stopChat();
         if (roomRef) {
             try {
-                // Delete messages subcollection
-                const messagesRef = collection(roomRef, "messages");
-                const messagesSnap = await getDocs(messagesRef);
-                messagesSnap.forEach((docSnap) => {
-                    deleteDoc(docSnap.ref);
-                });
-                
-                // Delete caller candidates
-                const callerCandidates = await getDocs(collection(roomRef, 'callerCandidates'));
-                callerCandidates.forEach((docSnap) => {
-                    deleteDoc(docSnap.ref);
-                });
-                
-                // Delete callee candidates
-                const calleeCandidates = await getDocs(collection(roomRef, 'calleeCandidates'));
-                calleeCandidates.forEach((docSnap) => {
-                    deleteDoc(docSnap.ref);
-                });
+                const roomDoc = await getDoc(roomRef);
+                if (roomDoc.exists()) {
+                    const messagesRef = collection(roomRef, "messages");
+                    const messagesSnap = await getDocs(messagesRef);
+                    messagesSnap.forEach((docSnap) => {
+                        deleteDoc(docSnap.ref);
+                    });
+                    
+                    const callerCandidates = await getDocs(collection(roomRef, 'callerCandidates'));
+                    callerCandidates.forEach((docSnap) => {
+                        deleteDoc(docSnap.ref);
+                    });
+                    
+                    const calleeCandidates = await getDocs(collection(roomRef, 'calleeCandidates'));
+                    calleeCandidates.forEach((docSnap) => {
+                        deleteDoc(docSnap.ref);
+                    });
 
-                // Finally delete the room document itself
-                await deleteDoc(roomRef);
+                    await deleteDoc(roomRef);
+                }
             } catch (e) {
                 console.error("Error during room cleanup:", e);
             }
