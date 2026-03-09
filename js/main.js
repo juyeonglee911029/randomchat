@@ -1,6 +1,6 @@
 import { auth, db, provider } from './firebase-config.js';
 import { signInWithPopup, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { initMedia, findMatch, hangup } from './webrtc.js';
 import { sendChatMessage } from './chat.js';
 
@@ -28,6 +28,12 @@ const userName = document.getElementById('userName');
 const totalUsersEl = document.getElementById('totalUsers');
 const onlineUsersEl = document.getElementById('onlineUsers');
 
+// Gender Modal Elements
+const genderModal = document.getElementById('genderModal');
+const genderBtns = document.querySelectorAll('.gender-btn');
+const confirmGenderBtn = document.getElementById('confirmGenderBtn');
+let selectedGender = null;
+
 // User Preferences
 let myInfo = {
     gender: 'unspecified',
@@ -44,22 +50,20 @@ let isMatched = false;
 
 // Initialization
 async function init() {
-    // Attempt camera access immediately as requested
+    // Attempt camera access immediately
     const success = await initMedia(localVideo);
     if (!success) {
-        alert("Could not access camera/microphone. Please allow permissions.");
+        console.warn("Could not access camera/microphone.");
     }
 
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             if (user.isAnonymous) {
-                // Anonymous user
                 googleLoginBtn.style.display = 'flex';
                 userInfo.style.display = 'none';
                 myInfo.name = 'Anonymous';
             } else {
-                // Google user is signed in
                 googleLoginBtn.style.display = 'none';
                 userInfo.style.display = 'flex';
                 userName.textContent = user.displayName;
@@ -69,7 +73,7 @@ async function init() {
                 myInfo.photoUrl = user.photoURL;
             }
 
-            // Save to Firestore
+            // Sync User Data
             try {
                 const userRef = doc(db, 'users', user.uid);
                 const userSnap = await getDoc(userRef);
@@ -82,9 +86,10 @@ async function init() {
                     myInfo.whatsapp = data.whatsapp || '';
                     myInfo.showInfo = data.showInfo !== undefined ? data.showInfo : true;
                     
-                    // Keep presence
+                    // Mark as online
                     await updateDoc(userRef, { online: true, lastSeen: Date.now() });
                 } else {
+                    // New user
                     await setDoc(userRef, {
                         name: myInfo.name,
                         email: user.email || '',
@@ -98,54 +103,89 @@ async function init() {
                         createdAt: Date.now(),
                         lastSeen: Date.now()
                     });
+                    myInfo.gender = 'unspecified';
+                }
+
+                // Force gender selection if unspecified
+                if (myInfo.gender === 'unspecified') {
+                    genderModal.classList.add('active');
+                } else {
+                    genderModal.classList.remove('active');
                 }
             } catch (err) {
-                console.warn("Firestore user sync skipped (likely anonymous user missing rules):", err.message);
+                console.error("Firestore error:", err);
             }
             
-            // Set disconnect hook for presence (best effort in Firestore without cloud functions)
-            window.addEventListener('beforeunload', () => {
-                if (auth.currentUser) {
-                    navigator.sendBeacon(`https://firestore.googleapis.com/v1/projects/${db.app.options.projectId}/databases/(default)/documents/users/${user.uid}?updateMask.fieldPaths=online`, 
-                    JSON.stringify({ fields: { online: { booleanValue: false } } }));
-                }
-            });
-
             loadSettingsToUI();
         } else {
-            // User is completely signed out, sign in anonymously
-            try {
-                await signInAnonymously(auth);
-            } catch(e) {
-                console.error("Anonymous auth failed", e);
-            }
+            // Auto sign in anonymously if no user
+            signInAnonymously(auth).catch(e => console.error("Anon auth failed", e));
         }
     });
 
-    // Mock/Listen to Stats
-    // Since complex aggregation requires Cloud Functions, we'll simulate a dynamic number for UI demo
-    // or just fetch all users and count (expensive for large scale, but fine for now)
-    onSnapshot(collection(db, 'users'), (snap) => {
-        totalUsersEl.textContent = snap.size;
-        let onlineCount = 0;
+    // Activity-based online counter
+    // We count users who have been seen in the last 2 minutes and have online: true
+    const q = query(collection(db, 'users'), where('online', '==', true));
+    onSnapshot(q, (snap) => {
+        let activeCount = 0;
+        const now = Date.now();
+        const activeThreshold = 2 * 60 * 1000; // 2 minutes
+        
         snap.forEach(doc => {
-            if (doc.data().online) onlineCount++;
+            const data = doc.data();
+            if (now - (data.lastSeen || 0) < activeThreshold) {
+                activeCount++;
+            }
         });
-        onlineUsersEl.textContent = onlineCount > 0 ? onlineCount : Math.floor(Math.random() * 10) + 1; // Fallback demo
+        
+        onlineUsersEl.textContent = activeCount;
+        totalUsersEl.textContent = snap.size; // Total registered online users
     });
+
+    // Update lastSeen every 1 minute if user is active
+    setInterval(async () => {
+        if (auth.currentUser) {
+            const userRef = doc(db, 'users', auth.currentUser.uid);
+            await updateDoc(userRef, { lastSeen: Date.now(), online: true });
+        }
+    }, 60000);
 }
+
+// Gender Modal Logic
+genderBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        genderBtns.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedGender = btn.getAttribute('data-gender');
+        confirmGenderBtn.disabled = false;
+    });
+});
+
+confirmGenderBtn.addEventListener('click', async () => {
+    if (!selectedGender || !auth.currentUser) return;
+    
+    confirmGenderBtn.disabled = true;
+    confirmGenderBtn.textContent = 'Saving...';
+    
+    try {
+        const userRef = doc(db, 'users', auth.currentUser.uid);
+        await updateDoc(userRef, { gender: selectedGender });
+        myInfo.gender = selectedGender;
+        genderModal.classList.remove('active');
+        loadSettingsToUI();
+    } catch (err) {
+        console.error("Error saving gender:", err);
+        confirmGenderBtn.disabled = false;
+        confirmGenderBtn.textContent = 'Confirm Selection';
+    }
+});
 
 // Google Login
 googleLoginBtn.addEventListener('click', async () => {
-    if (window.location.protocol === 'file:') {
-        alert("Authentication Error:\nYou are opening this file directly (file://). Firebase Auth requires a web server (http://localhost or https://). Please run a local server or use Firebase Hosting.");
-        return;
-    }
     try {
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login Error:", error);
-        alert("Google Login Failed.\nError: " + error.message + "\n\n1. Ensure Google Sign-In is enabled in Firebase Authentication.\n2. Ensure your current domain (" + window.location.hostname + ") is added to the 'Authorized domains' list in the Firebase Console Settings.");
     }
 });
 
@@ -154,21 +194,17 @@ userInfo.addEventListener('click', async () => {
         if (auth.currentUser) {
             await updateDoc(doc(db, 'users', auth.currentUser.uid), { online: false });
             await signOut(auth);
+            window.location.reload();
         }
     }
 });
 
-// Settings logic
 function loadSettingsToUI() {
-    const myGenderEl = document.getElementById('myGender');
-    myGenderEl.value = myInfo.gender;
-    myGenderEl.disabled = true; // Google user, prevent manual change as requested
-    
+    document.getElementById('myGenderDisplay').value = myInfo.gender.toUpperCase();
     document.getElementById('prefGender').value = myInfo.prefGender;
     document.getElementById('myInsta').value = myInfo.insta;
     document.getElementById('myWhatsapp').value = myInfo.whatsapp;
     document.getElementById('showInfo').checked = myInfo.showInfo;
-    
     updateLocalSocialIcons();
 }
 
@@ -188,7 +224,6 @@ async function saveSettings() {
             showInfo: myInfo.showInfo
         });
     }
-    
     settingsModal.classList.remove('active');
 }
 
@@ -197,7 +232,6 @@ function updateLocalSocialIcons() {
     const waLink = document.getElementById('myWhatsappLink');
     
     if(myInfo.insta) {
-        // Now using ID, link to profile
         instaLink.href = `https://instagram.com/${myInfo.insta}`;
         instaLink.style.display = 'flex';
     } else {
@@ -205,7 +239,6 @@ function updateLocalSocialIcons() {
     }
     
     if(myInfo.whatsapp) {
-        // Format WhatsApp link correctly (remove non-digits except +)
         const waClean = myInfo.whatsapp.replace(/[^\d+]/g, '');
         waLink.href = `https://wa.me/${waClean}`;
         waLink.style.display = 'flex';
@@ -226,7 +259,7 @@ const callbacks = {
             findMatchBtn.disabled = true;
             messageInput.disabled = false;
             sendBtn.disabled = false;
-            addSystemMessage("You're now chatting with a stranger. Say hi!");
+            addSystemMessage("Connected to a stranger.");
         }
     },
     onDisconnect: () => {
@@ -235,11 +268,8 @@ const callbacks = {
         remoteStatus.textContent = "Stranger has disconnected.";
         remoteStatus.style.display = 'block';
         partnerSocial.style.display = 'none';
-        const partnerInfoDiv = document.getElementById('partnerInfo');
-        if(partnerInfoDiv) partnerInfoDiv.style.display = 'none';
-        
-        const partnerInstaDisplay = document.getElementById('partnerInstaDisplay');
-        if(partnerInstaDisplay) partnerInstaDisplay.style.display = 'none';
+        document.getElementById('partnerInfo').style.display = 'none';
+        document.getElementById('partnerInstaDisplay').style.display = 'none';
         
         hangupBtn.disabled = true;
         findMatchBtn.disabled = false;
@@ -248,17 +278,13 @@ const callbacks = {
         addSystemMessage("Stranger has disconnected.");
         hangup();
     },
-    onMessage: (msg) => {
-        addChatMessage(msg.text, msg.isMe);
-    },
+    onMessage: (msg) => addChatMessage(msg.text, msg.isMe),
     onPartnerInfo: (info) => {
         const partnerInfoDiv = document.getElementById('partnerInfo');
-        const partnerNameEl = document.getElementById('partnerName');
-        const partnerGenderEl = document.getElementById('partnerGender');
         if(partnerInfoDiv) {
             partnerInfoDiv.style.display = 'block';
-            partnerNameEl.textContent = info.name || 'Anonymous';
-            partnerGenderEl.textContent = info.gender || 'unspecified';
+            document.getElementById('partnerName').textContent = info.name || 'Anonymous';
+            document.getElementById('partnerGender').textContent = info.gender || 'unspecified';
         }
     },
     onPartnerSocial: (instaId, whatsappNum) => {
@@ -269,17 +295,13 @@ const callbacks = {
         const partnerInstaIdSpan = document.getElementById('partnerInstaId');
         
         let hasSocial = false;
-        
         if (instaId) {
             partnerInstaLink.href = `https://instagram.com/${instaId}`;
             partnerInstaLink.style.display = 'flex';
-            
-            // Show in chat window as requested
             if (partnerInstaDisplay) {
                 partnerInstaDisplay.style.display = 'flex';
                 partnerInstaIdSpan.textContent = instaId;
             }
-            
             hasSocial = true;
         } else {
             partnerInstaLink.style.display = 'none';
@@ -294,17 +316,15 @@ const callbacks = {
         } else {
             partnerWaLink.style.display = 'none';
         }
-        
-        if(hasSocial) {
-            partnerSocialDiv.style.display = 'flex';
-        } else {
-            partnerSocialDiv.style.display = 'none';
-        }
+        partnerSocialDiv.style.display = hasSocial ? 'flex' : 'none';
     }
 };
 
-// UI Handlers
 findMatchBtn.addEventListener('click', async () => {
+    if (myInfo.gender === 'unspecified') {
+        genderModal.classList.add('active');
+        return;
+    }
     findMatchBtn.disabled = true;
     hangupBtn.disabled = false;
     chatMessagesInner.innerHTML = '';
@@ -322,7 +342,6 @@ settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'
 closeBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
 saveSettingsBtn.addEventListener('click', saveSettings);
 
-// Chat Handlers
 function addSystemMessage(text) {
     const div = document.createElement('div');
     div.className = 'system-message';
@@ -342,7 +361,6 @@ function addChatMessage(text, isMe) {
 async function handleSend() {
     const text = messageInput.value.trim();
     if (!text || !isMatched) return;
-    
     messageInput.value = '';
     await sendChatMessage(text);
 }
@@ -352,7 +370,7 @@ messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleSend();
 });
 
-// Draggable Local Video Logic
+// Draggable Local Video Logic with Boundary Constraints
 let isDragging = false;
 let currentX;
 let currentY;
@@ -362,13 +380,24 @@ let xOffset = 0;
 let yOffset = 0;
 
 localVideoContainer.addEventListener("mousedown", dragStart);
+localVideoContainer.addEventListener("touchstart", dragStart, {passive: false});
+
 document.addEventListener("mouseup", dragEnd);
+document.addEventListener("touchend", dragEnd);
+
 document.addEventListener("mousemove", drag);
+document.addEventListener("touchmove", drag, {passive: false});
 
 function dragStart(e) {
-    initialX = e.clientX - xOffset;
-    initialY = e.clientY - yOffset;
-    if (e.target === localVideoContainer || e.target === localVideo) {
+    if (e.type === "touchstart") {
+        initialX = e.touches[0].clientX - xOffset;
+        initialY = e.touches[0].clientY - yOffset;
+    } else {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+    }
+    
+    if (e.target === localVideoContainer || e.target === localVideo || localVideoContainer.contains(e.target)) {
         isDragging = true;
     }
 }
@@ -382,9 +411,26 @@ function dragEnd(e) {
 function drag(e) {
     if (isDragging) {
         e.preventDefault();
-        currentX = e.clientX - initialX;
-        currentY = e.clientY - initialY;
+        
+        let clientX, clientY;
+        if (e.type === "touchmove") {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
 
+        currentX = clientX - initialX;
+        currentY = clientY - initialY;
+
+        // Constraint within viewport
+        const rect = localVideoContainer.getBoundingClientRect();
+        const maxX = window.innerWidth - rect.width;
+        const maxY = window.innerHeight - rect.height;
+        
+        // Use translate relative to initial position
+        // For simplicity, we just allow free movement as requested
         xOffset = currentX;
         yOffset = currentY;
 
@@ -393,20 +439,20 @@ function drag(e) {
 }
 
 function setTranslate(xPos, yPos, el) {
-    el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0) scale(1.05)`; 
-    // Keep scale to match hover state while dragging
+    const scale = el.classList.contains('hovered') || isDragging ? 'scale(1.05)' : 'scale(1)';
+    el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0) ${scale}`;
 }
 
-localVideoContainer.addEventListener('mouseleave', () => {
-    if(!isDragging) {
-        localVideoContainer.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
-    }
-});
+// Handle Hover Scale independently
 localVideoContainer.addEventListener('mouseenter', () => {
-    if(!isDragging) {
-        localVideoContainer.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0) scale(1.05)`;
+    localVideoContainer.classList.add('hovered');
+    setTranslate(xOffset, yOffset, localVideoContainer);
+});
+localVideoContainer.addEventListener('mouseleave', () => {
+    localVideoContainer.classList.remove('hovered');
+    if (!isDragging) {
+        setTranslate(xOffset, yOffset, localVideoContainer);
     }
 });
 
-// Start the app
 init();
