@@ -57,6 +57,7 @@ body {
     100% { background-position: 0% 50%; }
 }
 
+/* Logo */
 .logo {
     display: flex;
     align-items: center;
@@ -90,9 +91,10 @@ body {
     font-weight: 900;
     letter-spacing: -0.5px;
     font-size: 1.5rem;
+    color: var(--primary);
 }
 
-.logo-text span {
+.logo-text .yellow, .logo-text .chat {
     color: var(--primary);
 }
 
@@ -318,41 +320,71 @@ body {
 
 .partner-info {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0,0,0,0.7);
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 0.95rem;
+    top: 15px;
+    left: 15px;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 15px;
+    border-radius: 30px;
+    font-size: 1.1rem;
     color: var(--primary);
-    font-weight: 600;
-    z-index: 5;
-    border: 1px solid var(--border-color);
+    font-weight: 700;
+    z-index: 50;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    backdrop-filter: blur(4px);
+}
+
+.partner-insta-overlay {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.partner-insta-overlay .social-svg-icon {
+    width: 32px; /* Increased to match logo-icon-wrapper feel */
+    height: 32px;
+    color: var(--primary);
 }
 
 .floating-social {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    bottom: 15px;
+    right: 15px;
     display: flex;
-    gap: 8px;
-    z-index: 10;
+    gap: 12px;
+    z-index: 60;
 }
 
-.floating-social a {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
+.social-btn {
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    background: transparent; /* Removed dark circular background that looked like shutter button */
+    color: var(--primary);
     text-decoration: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
     transition: transform 0.2s, filter 0.2s;
+    border: none; /* Removed border */
 }
 
-.floating-social a:hover { transform: scale(1.1); filter: brightness(1.2); }
+.social-svg-icon {
+    width: 38px; /* Larger icons for "official logo" feel */
+    height: 38px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+.social-btn:hover { 
+    transform: scale(1.15); 
+    filter: brightness(1.2);
+}
+
+.remote-social .social-btn {
+    color: var(--primary);
+}
+
+.local-social .social-btn {
+    color: var(--primary);
+}
 
 .chat-container {
     width: 350px;

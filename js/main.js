@@ -280,12 +280,7 @@ const callbacks = {
     },
     onMessage: (msg) => addChatMessage(msg.text, msg.isMe),
     onPartnerInfo: (info) => {
-        const partnerInfoDiv = document.getElementById('partnerInfo');
-        if(partnerInfoDiv) {
-            partnerInfoDiv.style.display = 'block';
-            document.getElementById('partnerName').textContent = info.name || 'Anonymous';
-            document.getElementById('partnerGender').textContent = info.gender || 'unspecified';
-        }
+        // No longer showing name/gender in webcam overlay as per request
     },
     onPartnerSocial: (instaId, whatsappNum) => {
         const partnerSocialDiv = document.getElementById('partnerSocial');
@@ -293,6 +288,9 @@ const callbacks = {
         const partnerWaLink = document.getElementById('partnerWhatsappLink');
         const partnerInstaDisplay = document.getElementById('partnerInstaDisplay');
         const partnerInstaIdSpan = document.getElementById('partnerInstaId');
+        
+        const partnerInfoDiv = document.getElementById('partnerInfo');
+        const partnerInstaIdTop = document.getElementById('partnerInstaIdTop');
         
         let hasSocial = false;
         if (instaId) {
@@ -302,10 +300,15 @@ const callbacks = {
                 partnerInstaDisplay.style.display = 'flex';
                 partnerInstaIdSpan.textContent = instaId;
             }
+            if (partnerInfoDiv && partnerInstaIdTop) {
+                partnerInfoDiv.style.display = 'block';
+                partnerInstaIdTop.textContent = instaId;
+            }
             hasSocial = true;
         } else {
             partnerInstaLink.style.display = 'none';
             if (partnerInstaDisplay) partnerInstaDisplay.style.display = 'none';
+            if (partnerInfoDiv) partnerInfoDiv.style.display = 'none';
         }
         
         if (whatsappNum) {
