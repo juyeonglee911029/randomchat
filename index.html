@@ -12,42 +12,47 @@
     <div class="app-container">
         <!-- Header / Controls -->
         <header class="header animated-header">
-            <div class="logo">
-                <div class="logo-icon-wrapper">
-                    <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 10L20 6V18L15 14V17C15 18.1046 14.1046 19 13 19H4C2.89543 19 2 18.1046 2 17V7C2 5.89543 2.89543 5 4 5H13C14.1046 5 15 5.89543 15 7V10Z" fill="currentColor"/>
-                    </svg>
+            <div class="header-main">
+                <div class="logo">
+                    <div class="logo-icon-wrapper">
+                        <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 10L20 6V18L15 14V17C15 18.1046 14.1046 19 13 19H4C2.89543 19 2 18.1046 2 17V7C2 5.89543 2.89543 5 4 5H13C14.1046 5 15 5.89543 15 7V10Z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <h1 class="logo-text"><span class="yellow">YELLOW</span><span class="chat">CHAT</span></h1>
                 </div>
-                <h1 class="logo-text"><span class="yellow">YELLOW</span><span class="chat">CHAT</span></h1>
+
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <i class="material-icons">people</i>
+                        <div class="stat-info">
+                            <span class="stat-label">Total Users</span>
+                            <span class="stat-value" id="totalUsers">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-item online">
+                        <div class="pulse-dot"></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Online Now</span>
+                            <span class="stat-value" id="onlineUsers">0</span>
+                        </div>
+                    </div>
+                    <div id="google_translate_element"></div>
+                </div>
+
+                <div class="auth-container">
+                    <button id="googleLoginBtn" class="btn secondary">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
+                        Login
+                    </button>
+                    <div id="userInfo" style="display: none; align-items: center; gap: 10px;">
+                        <span id="userName" style="font-weight: bold; color: white; font-size: 0.9rem;"></span>
+                        <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);">
+                    </div>
+                </div>
             </div>
             
-            <div class="stats-container">
-                <div class="stat-item">
-                    <i class="material-icons">people</i>
-                    <div class="stat-info">
-                        <span class="stat-label">Total Users</span>
-                        <span class="stat-value" id="totalUsers">0</span>
-                    </div>
-                </div>
-                <div class="stat-item online">
-                    <div class="pulse-dot"></div>
-                    <div class="stat-info">
-                        <span class="stat-label">Online Now</span>
-                        <span class="stat-value" id="onlineUsers">0</span>
-                    </div>
-                </div>
-                <div id="google_translate_element"></div>
-            </div>
-
             <div class="controls">
-                <button id="googleLoginBtn" class="btn secondary">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
-                    Login
-                </button>
-                <div id="userInfo" style="display: none; align-items: center; gap: 10px; margin-right: 15px;">
-                    <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%;">
-                    <span id="userName" style="font-weight: bold; color: white;"></span>
-                </div>
                 <button id="findMatchBtn" class="btn primary">
                     <i class="material-icons">shuffle</i>
                     Find Stranger
@@ -154,12 +159,20 @@
         <!-- Matching Animation Overlay -->
         <div id="matchingOverlay" class="matching-overlay" style="display: none;">
             <div class="matching-content">
-                <div class="rotating-logo">
-                    <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M15 10L20 6V18L15 14V17C15 18.1046 14.1046 19 13 19H4C2.89543 19 2 18.1046 2 17V7C2 5.89543 2.89543 5 4 5H13C14.1046 5 15 5.89543 15 7V10Z" fill="currentColor"/>
-                    </svg>
+                <div class="loader-wrapper">
+                    <div class="loader-pulse"></div>
+                    <div class="rotating-logo">
+                        <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 10L20 6V18L15 14V17C15 18.1046 14.1046 19 13 19H4C2.89543 19 2 18.1046 2 17V7C2 5.89543 2.89543 5 4 5H13C14.1046 5 15 5.89543 15 7V10Z" fill="currentColor"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="matching-text">Finding...</div>
+                <div class="matching-text-wrapper">
+                    <div class="matching-text">SEARCHING</div>
+                    <div class="loading-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
             </div>
         </div>
 
