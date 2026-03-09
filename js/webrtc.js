@@ -14,8 +14,11 @@ let isCaller = false;
 
 const configuration = {
     iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
     ]
 };
 
@@ -48,10 +51,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     
     callbacks.onStatus("Searching for a stranger...");
     
-    // 1. Check for waiting rooms
     const roomsRef = collection(db, "chatRooms");
-    
-    // We try to match based on preferences, but keep it simple first
     let q;
     if (myInfo.prefGender !== "any") {
         q = query(roomsRef, where("status", "==", "waiting"), where("callerGender", "==", myInfo.prefGender), limit(1));
@@ -63,36 +63,37 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     
     peerConnection = new RTCPeerConnection(configuration);
     
-    // Listen for local ICE candidates
+    // Track pending candidates to avoid adding them before remote description
+    const pendingCandidates = [];
+
     peerConnection.addEventListener('icecandidate', event => {
         if (!event.candidate) { return; }
+        // Ensure roomRef is ready before adding candidate to DB
         if (roomRef) {
             const candidatesCollection = isCaller ? 'callerCandidates' : 'calleeCandidates';
             addDoc(collection(roomRef, candidatesCollection), event.candidate.toJSON());
+        } else {
+            // If roomRef not ready yet (Caller case), we'll add them after setting the doc
+            pendingCandidates.push(event.candidate);
         }
     });
 
-    // Add local tracks to connection
     if (localStream) {
         localStream.getTracks().forEach(track => {
             peerConnection.addTrack(track, localStream);
         });
     }
 
-    // Listen for remote tracks
     peerConnection.addEventListener('track', event => {
-        event.streams[0].getTracks().forEach(track => {
-            if (!remoteStream) {
-                remoteStream = new MediaStream();
-                remoteVideoElement.srcObject = remoteStream;
-            }
-            remoteStream.addTrack(track);
-        });
-        callbacks.onStatus("Connected!");
+        if (event.streams && event.streams[0]) {
+            remoteVideoElement.srcObject = event.streams[0];
+            remoteStream = event.streams[0];
+            callbacks.onStatus("Connected!");
+        }
     });
     
-    // Listen for connection state changes
     peerConnection.addEventListener('connectionstatechange', event => {
+        console.log("Connection state:", peerConnection.connectionState);
         if (peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'failed') {
             callbacks.onDisconnect();
             hangup();
@@ -100,13 +101,11 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     });
 
     if (!querySnapshot.empty) {
-        // Join existing room as Callee
         isCaller = false;
         const roomDoc = querySnapshot.docs[0];
         roomId = roomDoc.id;
         roomRef = doc(db, "chatRooms", roomId);
         
-        // Update room status
         await updateDoc(roomRef, {
             status: "joined",
             calleeGender: myInfo.gender || 'unspecified',
@@ -117,7 +116,6 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
 
         setupChat(roomId, callbacks.onMessage);
         
-        // Notify UI about partner social info
         const data = roomDoc.data();
         if(callbacks.onPartnerSocial) {
             callbacks.onPartnerSocial(data.callerInsta, data.callerWhatsapp);
@@ -129,33 +127,32 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             });
         }
 
-        // Fetch Caller Offer
         const offer = data.offer;
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
         
-        // Create Answer
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         
         await updateDoc(roomRef, { answer: { type: answer.type, sdp: answer.sdp } });
         
-        // Listen to Caller Candidates
         unsubCallerCandidates = onSnapshot(collection(roomRef, 'callerCandidates'), snapshot => {
             snapshot.docChanges().forEach(async change => {
                 if (change.type === 'added') {
-                    let data = change.doc.data();
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                    let candidateData = change.doc.data();
+                    try {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
+                    } catch (e) {
+                        console.error("Error adding received ice candidate", e);
+                    }
                 }
             });
         });
         
     } else {
-        // Create new room as Caller
         isCaller = true;
         roomRef = doc(collection(db, "chatRooms"));
         roomId = roomRef.id;
         
-        // Create Offer
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         
@@ -170,10 +167,17 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         };
         
         await setDoc(roomRef, roomWithOffer);
+        
+        // Now that roomRef is set, add any pending candidates
+        const candidatesCollection = 'callerCandidates';
+        pendingCandidates.forEach(candidate => {
+            addDoc(collection(roomRef, candidatesCollection), candidate.toJSON());
+        });
+        pendingCandidates.length = 0;
+
         setupChat(roomId, callbacks.onMessage);
         
         let partnerInfoFired = false;
-        // Listen for Callee Answer
         unsubRoom = onSnapshot(roomRef, async snapshot => {
             const data = snapshot.data();
             if (!data) return;
@@ -196,12 +200,20 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             }
         });
         
-        // Listen for Callee Candidates
         unsubCalleeCandidates = onSnapshot(collection(roomRef, 'calleeCandidates'), snapshot => {
             snapshot.docChanges().forEach(async change => {
                 if (change.type === 'added') {
-                    let data = change.doc.data();
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+                    let candidateData = change.doc.data();
+                    try {
+                        if (peerConnection.remoteDescription) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
+                        } else {
+                            // Rare case where candidate arrives before answer is processed locally
+                            console.warn("Received candidate before remote description, skipping for now.");
+                        }
+                    } catch (e) {
+                        console.error("Error adding received ice candidate", e);
+                    }
                 }
             });
         });
