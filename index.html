@@ -22,32 +22,17 @@
                     <h1 class="logo-text"><span class="yellow">YELLOW</span><span class="chat">CHAT</span></h1>
                 </div>
 
-                <div class="stats-container">
-                    <div class="stat-item">
-                        <i class="material-icons">people</i>
-                        <div class="stat-info">
-                            <span class="stat-label">Total Users</span>
-                            <span class="stat-value" id="totalUsers">0</span>
-                        </div>
-                    </div>
-                    <div class="stat-item online">
-                        <div class="pulse-dot"></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Online Now</span>
-                            <span class="stat-value" id="onlineUsers">0</span>
-                        </div>
-                    </div>
-                    <div id="google_translate_element"></div>
-                </div>
-
                 <div class="auth-container">
-                    <button id="googleLoginBtn" class="btn secondary">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
-                        Login
-                    </button>
-                    <div id="userInfo" style="display: none; align-items: center; gap: 10px;">
-                        <span id="userName" style="font-weight: bold; color: white; font-size: 0.9rem;"></span>
-                        <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);">
+                    <div class="auth-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                        <button id="googleLoginBtn" class="btn secondary">
+                            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width: 18px; height: 18px; margin-right: 5px;">
+                            Login
+                        </button>
+                        <div id="userInfo" style="display: none; align-items: center; gap: 10px;">
+                            <span id="userName" style="font-weight: bold; color: white; font-size: 0.9rem;"></span>
+                            <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);">
+                        </div>
+                        <div id="google_translate_element"></div>
                     </div>
                 </div>
             </div>
@@ -235,7 +220,10 @@
     <!-- Google Translate Script -->
     <script type="text/javascript">
     function googleTranslateElementInit() {
-      new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'ko,en,ja,zh-CN'}, 'google_translate_element');
+      new google.translate.TranslateElement({
+        pageLanguage: 'en', 
+        includedLanguages: 'en,zh-CN,hi,es,fr,ar,bn,pt,ru,ur,id,de,ja,mr,te,tr,ta,ko,vi,it'
+      }, 'google_translate_element');
     }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
