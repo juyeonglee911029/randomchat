@@ -1,55 +1,26 @@
-# Blueprint: YELLOWCHAT
+# YELLOWCHAT Project Blueprint
 
 ## Overview
-YELLOWCHAT is a framework-less web application for anonymous video chatting, built with modern web standards and integrated with Firebase. It features real-time video streaming (WebRTC), instant messaging, and user authentication via Google or anonymously.
+YELLOWCHAT is a real-time random video chat application built with framework-less web standards (HTML, CSS, JS) and Firebase.
 
-## Project Details & Features
+## Design & Features
+- **Modern Aesthetic:** Dark theme with vibrant yellow primary color.
+- **Responsive Layout:** Adaptive design for desktop and mobile.
+- **Header:** Contains logo, match controls, and user authentication status.
+- **Video Container:** Main area for remote video with a small overlay for local video.
+- **Video Controls:** Bottom overlay bar for mic toggle, brightness, mirroring, and volume.
+- **Chat:** Sidebar (desktop) or bottom section (mobile) for text communication.
+- **Animations:** Floating logo, matching overlay, and transition effects.
+- **Premium Effects:** Subtle noise texture, multi-layered drop shadows, and glow effects on interactive elements.
 
-### 1. Architecture
-- **Framework-less:** Pure HTML, CSS, and JavaScript.
-- **Firebase Integration:** Uses Firebase Auth for user management and Firestore for real-time signaling and user data.
-- **WebRTC:** Peer-to-peer video/audio connection for the chat experience.
-- **Responsive Design:** Adapts to desktop and mobile viewports.
+## Recent Changes (March 10, 2026)
+- **Header:** Modified to hide Google user information (#userInfo) on mobile devices to save space and improve focus on controls.
+- **UI Layout:** 
+    - Moved local video (.local-wrapper) to the bottom-right corner.
+    - Repositioned video controls (.video-controls-bottom) to stay on the bottom-left, ensuring they are opposite to the video logo overlay (top-right).
+    - On mobile, ensured elements don't overlap by positioning them in opposite corners.
 
-### 2. UI/UX Design
-- **Color Palette:** Dark theme (`#121212`) with vibrant Yellow (`#FFD700`) as the primary accent.
-- **Header:** Contains the logo and user authentication/controls.
-- **Main Layout:** 
-  - Left Sidebar: Placeholder for AdSense.
-  - Center Area: Remote video stream with local video overlay (draggable).
-  - Right Sidebar: Chat interface.
-- **Modern Effects:** Animated gradient headers, glassmorphism for video controls, and pulse animations for the matching state.
-
-### 3. Core Features
-- **Google & Anonymous Login:** Seamless entry into the app.
-- **Gender Selection:** One-time selection for improved matching logic.
-- **Stranger Matching:** Finds and connects users based on preferences.
-- **Real-time Chat:** Instant text communication during video sessions.
-- **Video Controls:** Toggle mic, adjust volume, brightness, and mirror view.
-- **Social Sharing:** Option to share Instagram ID and WhatsApp number with the partner.
-
-## Current Requested Changes
-
-### Header Layout Update
-- **Goal:** Place the Logo on the left and the Google ID (User Info) on the right in a single line to maximize chat space.
-- **Steps:**
-  - Modify `index.html` to restructure the header content.
-  - Move the Google ID container next to the main control buttons.
-  - Update `css/style.css` to handle the new horizontal alignment.
-
-### Visual Polishing
-- **Goal:** Add a custom yellow scrollbar for a more themed appearance.
-- **Steps:**
-  - Add CSS `::-webkit-scrollbar` styles to `css/style.css`.
-  - Ensure the scrollbar thumb is yellow (`#FFD700`).
-
-### Auto-Scroll Fix
-- **Goal:** Ensure the chat automatically scrolls to the bottom when new messages arrive.
-- **Steps:**
-  - Update `js/main.js` to target the correct scrollable container (`chat-messages`).
-
-## Implementation Log (Current Session)
-1. **Blueprint Creation:** Initialized `blueprint.md`.
-2. **Header Restructuring:** Updated `index.html` to place Logo on left and User Info on right.
-3. **CSS Styling:** Updated `css/style.css` for horizontal header alignment and yellow scrollbar.
-4. **Auto-Scroll Fix:** Updated `js/main.js` to correctly target the scrollable chat container.
+## Implementation Steps
+1.  Identify `#userInfo` in CSS and apply `display: none !important` within the 768px media query.
+2.  Update `.local-wrapper` CSS to use `right: 20px` (desktop) and `right: 10px` (mobile), while setting `left: auto`.
+3.  Verify `.video-controls-bottom` remains at `left: 20px` (desktop) and `left: 10px` (mobile).
