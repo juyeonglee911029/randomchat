@@ -36,12 +36,12 @@ body {
 /* Header */
 .header {
     display: flex;
-    padding: 0.4rem 1.5rem; /* Reduced padding */
+    padding: 0.4rem 1.5rem; 
     background-color: var(--bg-panel);
     border-bottom: 1px solid var(--border-color);
     box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     z-index: 10;
-    min-height: 60px; /* Controlled height */
+    min-height: 60px; 
 }
 
 .header-main {
@@ -54,7 +54,7 @@ body {
 .header-right {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 .auth-container {
@@ -64,9 +64,8 @@ body {
 
 .auth-wrapper {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
+    align-items: center;
+    gap: 10px;
 }
 
 #userInfo {
@@ -78,6 +77,32 @@ body {
     border-radius: 30px;
     border: none;
 }
+
+/* Yellow Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-variant);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--bg-dark);
+}
+
 
 #userName {
     font-weight: bold;
