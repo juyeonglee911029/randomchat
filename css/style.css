@@ -153,11 +153,10 @@ body {
     align-items: center;
     gap: 8px;
     z-index: 100;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 6px 12px;
-    border-radius: 30px;
+    background: transparent;
+    padding: 0;
     pointer-events: none;
-    opacity: 0.6;
+    opacity: 1;
 }
 
 .video-logo-overlay .logo-text {
@@ -407,15 +406,15 @@ body {
     position: absolute;
     top: 15px;
     left: 15px;
-    background: rgba(0,0,0,0.5);
+    background: transparent;
     padding: 8px 15px;
     border-radius: 30px;
     font-size: 1.1rem;
     color: var(--primary);
     font-weight: 700;
     z-index: 50;
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    backdrop-filter: blur(4px);
+    border: none;
+    backdrop-filter: none;
 }
 
 .partner-insta-overlay {
@@ -739,6 +738,14 @@ body {
         left: 10px;
     }
 
+    .video-controls-bottom {
+        bottom: 1px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.65);
+        transform-origin: bottom center;
+        white-space: nowrap;
+    }
+
     /* Mobile specific size reductions */
     .partner-insta-overlay .social-svg-icon {
         width: 26px; /* 32px - 6px */
@@ -748,6 +755,9 @@ body {
     .partner-info {
         font-size: 0.75rem; /* Reduced from 1.1rem */
         padding: 6px 12px;
+        background: transparent;
+        border: none;
+        backdrop-filter: none;
     }
 
     .social-btn {
