@@ -77,7 +77,32 @@
             <!-- Video Area -->
             <section class="video-container">
                 <div class="video-logo-overlay">
+                    <div class="logo-icon-wrapper small">
+                        <svg class="logo-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15 10L20 6V18L15 14V17C15 18.1046 14.1046 19 13 19H4C2.89543 19 2 18.1046 2 17V7C2 5.89543 2.89543 5 4 5H13C14.1046 5 15 5.89543 15 7V10Z" fill="currentColor"/>
+                        </svg>
+                    </div>
                     <span class="logo-text">YELLOWCHAT</span>
+                </div>
+
+                <div class="video-controls-bottom">
+                    <div class="video-control-item" title="Microphone Volume">
+                        <i class="material-icons" id="micToggleBtn">mic</i>
+                        <input type="range" id="micVolumeSlider" min="0" max="1" step="0.1" value="1" class="yellow-slider">
+                    </div>
+                    <div class="video-control-item" title="Brightness">
+                        <i class="material-icons">brightness_6</i>
+                        <input type="range" id="brightnessSlider" min="50" max="150" step="5" value="100" class="yellow-slider">
+                    </div>
+                    <div class="video-control-item" title="Mirror View">
+                        <button id="mirrorToggleBtn" class="video-control-btn">
+                            <i class="material-icons">flip</i>
+                        </button>
+                    </div>
+                    <div class="video-control-item" title="Remote Volume">
+                        <i class="material-icons" id="remoteVolumeBtn">volume_up</i>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1" class="yellow-slider">
+                    </div>
                 </div>
 
                 <div class="video-wrapper remote-wrapper">

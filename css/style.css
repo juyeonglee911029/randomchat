@@ -154,19 +154,28 @@ body {
     gap: 8px;
     z-index: 100;
     background: rgba(0, 0, 0, 0.4);
-    padding: 8px 15px;
+    padding: 6px 12px;
     border-radius: 30px;
     pointer-events: none;
     opacity: 0.6;
 }
 
 .video-logo-overlay .logo-text {
-    font-size: 1.2rem;
+    font-size: 0.9rem;
     font-weight: 900;
     color: var(--primary);
     letter-spacing: 1px;
     text-transform: uppercase;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+.logo-icon-wrapper.small {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
 }
 
 .controls {
@@ -254,14 +263,14 @@ body {
     left: 20px;
     width: 240px; 
     aspect-ratio: 4/3;
-    border: 3px solid var(--border-color);
+    border: none;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 25px rgba(0,0,0,0.6);
     background-color: #222;
     z-index: 50;
     cursor: grab;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.3s ease, border-color 0.3s;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.3s ease;
 }
 
 .local-wrapper:active {
@@ -270,8 +279,99 @@ body {
 
 .local-wrapper:hover {
     width: 360px; 
-    border-color: var(--primary);
     transform: scale(1.05);
+}
+
+.video-controls-bottom {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 20px;
+    border-radius: 40px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.video-control-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+}
+
+.video-control-item i {
+    font-size: 1.2rem;
+    color: var(--primary);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.video-control-item i:hover {
+    transform: scale(1.2);
+}
+
+.video-control-btn {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.video-control-btn:hover {
+    transform: scale(1.2);
+}
+
+.video-control-btn.active {
+    color: #fff;
+    text-shadow: 0 0 10px var(--primary);
+}
+
+/* Yellow Range Slider */
+.yellow-slider {
+    -webkit-appearance: none;
+    width: 60px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    outline: none;
+    transition: width 0.3s ease;
+}
+
+.yellow-slider:hover {
+    width: 90px;
+}
+
+.yellow-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--primary);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    border: 2px solid #000;
+}
+
+.yellow-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--primary);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    border: 2px solid #000;
 }
 
 #localVideo {

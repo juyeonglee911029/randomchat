@@ -33,6 +33,30 @@ export async function initMedia(localVideoElement) {
     }
 }
 
+export function setMicGain(gain) {
+    if (localStream) {
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = gain > 0;
+        });
+    }
+}
+
+export async function sendEffectUpdate(effects) {
+    if (roomRef) {
+        const updateData = {};
+        if (isCaller) {
+            if (effects.mirror !== undefined) updateData.callerMirror = effects.mirror;
+            if (effects.brightness !== undefined) updateData.callerBrightness = effects.brightness;
+        } else {
+            if (effects.mirror !== undefined) updateData.calleeMirror = effects.mirror;
+            if (effects.brightness !== undefined) updateData.calleeBrightness = effects.brightness;
+        }
+        if (Object.keys(updateData).length > 0) {
+            await updateDoc(roomRef, updateData);
+        }
+    }
+}
+
 export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     if (peerConnection) {
         await hangup();
@@ -127,12 +151,6 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         if(callbacks.onPartnerSocial) {
             callbacks.onPartnerSocial(data.callerInsta, data.callerWhatsapp);
         }
-        if(callbacks.onPartnerInfo) {
-            callbacks.onPartnerInfo({
-                name: data.callerName || 'Anonymous',
-                gender: data.callerGender || 'unspecified'
-            });
-        }
 
         const offer = data.offer;
         await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
@@ -148,9 +166,18 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         await updateDoc(roomRef, { answer: { type: answer.type, sdp: answer.sdp } });
         
         unsubRoom = onSnapshot(roomRef, snapshot => {
-            if (!snapshot.exists()) {
+            const data = snapshot.data();
+            if (!snapshot.exists() || !data) {
                 callbacks.onDisconnect();
                 hangup();
+                return;
+            }
+            // Handle partner effect updates
+            if (callbacks.onPartnerEffect) {
+                callbacks.onPartnerEffect({
+                    mirror: data.callerMirror,
+                    brightness: data.callerBrightness
+                });
             }
         });
 
@@ -198,7 +225,6 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
 
         setupChat(roomId, callbacks.onMessage);
         
-        let partnerInfoFired = false;
         unsubRoom = onSnapshot(roomRef, async snapshot => {
             const data = snapshot.data();
             if (!data) {
@@ -220,13 +246,13 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                 if (callbacks.onPartnerSocial) {
                     callbacks.onPartnerSocial(data.calleeInsta, data.calleeWhatsapp);
                 }
-                if (!partnerInfoFired && callbacks.onPartnerInfo) {
-                    partnerInfoFired = true;
-                    callbacks.onPartnerInfo({
-                        name: data.calleeName || 'Anonymous',
-                        gender: data.calleeGender || 'unspecified'
-                    });
-                }
+            }
+            // Handle partner effect updates
+            if (callbacks.onPartnerEffect) {
+                callbacks.onPartnerEffect({
+                    mirror: data.calleeMirror,
+                    brightness: data.calleeBrightness
+                });
             }
         });
         
@@ -293,3 +319,4 @@ export async function hangup() {
     
     remoteStream = null;
 }
+
