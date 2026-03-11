@@ -82,7 +82,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             callbacks.onDisconnect();
             hangup();
         }
-    }, 5000);
+    }, 15000); // Increased to 15 seconds
 
     let isMatchedRoom = false;
     
@@ -118,14 +118,23 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     }
 
     peerConnection.addEventListener('track', event => {
-        if (event.streams && event.streams[0]) {
-            isMatchedRoom = true;
-            clearTimeout(matchTimeout);
-            remoteVideoElement.srcObject = event.streams[0];
-            remoteStream = event.streams[0];
-            remoteVideoElement.play().catch(e => console.warn("Remote video play failed:", e));
+        console.log("Remote track received:", event.track.kind);
+        const stream = event.streams[0] || new MediaStream([event.track]);
+        
+        isMatchedRoom = true;
+        clearTimeout(matchTimeout);
+        
+        remoteVideoElement.srcObject = stream;
+        remoteStream = stream;
+        
+        remoteVideoElement.play().then(() => {
+            console.log("Remote video playing");
             callbacks.onStatus("Connected!");
-        }
+        }).catch(e => {
+            console.warn("Remote video play failed:", e);
+            // Still signal connected even if play() fails (e.g. autoplay block)
+            callbacks.onStatus("Connected!");
+        });
     });
     
     peerConnection.addEventListener('connectionstatechange', event => {

@@ -55,6 +55,7 @@ let myInfo = {
 
 // State
 let isMatched = false;
+let isConnecting = false;
 let isMicMuted = false;
 let isMirrored = false;
 let currentBrightness = 100;
@@ -312,30 +313,43 @@ async function startAutoMatching() {
     if (autoMatchInterval) return;
     document.getElementById('matchingOverlay').style.display = 'flex';
     const attemptMatch = async () => {
-        if (isMatched) { stopAutoMatching(); return; }
+        // Only attempt if not already matched AND not in the middle of a connection attempt
+        if (isMatched || isConnecting) {
+            console.log("Skipping match attempt: matched=" + isMatched + ", connecting=" + isConnecting);
+            return;
+        }
+        
+        isConnecting = true;
+        console.log("Attempting to find match...");
         await findMatch(remoteVideo, myInfo, callbacks);
     };
+    
     await attemptMatch();
     autoMatchInterval = setInterval(async () => {
-        if (!isMatched) await attemptMatch();
-        else stopAutoMatching();
-    }, 4000);
+        if (!isMatched && !isConnecting) await attemptMatch();
+        else if (isMatched) stopAutoMatching();
+    }, 5000); // Slightly increased interval for stability
 }
 
 function stopAutoMatching() {
     if (autoMatchInterval) { clearInterval(autoMatchInterval); autoMatchInterval = null; }
+    isConnecting = false;
     document.getElementById('matchingOverlay').style.display = 'none';
 }
 
 const callbacks = {
     onStatus: (msg) => {
+        console.log("Status update:", msg);
         if (msg === "Connected!") {
             setStatus(msg, true);
             isMatched = true;
+            isConnecting = false;
             stopAutoMatching();
             const transitionOverlay = document.getElementById('transitionOverlay');
-            transitionOverlay.style.display = 'flex';
-            setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500);
+            if (transitionOverlay) {
+                transitionOverlay.style.display = 'flex';
+                setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500);
+            }
             hangupBtn.disabled = false;
             findMatchBtn.disabled = true;
             messageInput.disabled = false;
@@ -349,14 +363,17 @@ const callbacks = {
         }
     },
     onDisconnect: () => {
+        console.log("Disconnected callback triggered");
         isMatched = false;
+        isConnecting = false;
         stopAutoMatching();
         remoteVideo.srcObject = null;
         remoteVideo.style.filter = 'none';
         remoteVideo.style.transform = 'none';
         setStatus("Stranger has disconnected.", true);
+        const partnerInfo = document.getElementById('partnerInfo');
+        if (partnerInfo) partnerInfo.style.display = 'none';
         partnerSocial.style.display = 'none';
-        document.getElementById('partnerInfo').style.display = 'none';
         hangupBtn.disabled = true;
         findMatchBtn.disabled = false;
         messageInput.disabled = true;
