@@ -52,7 +52,15 @@
                                 Login
                             </button>
                             <div id="userInfo" style="display: none;">
-                                <span id="userName"></span>
+                                <div class="user-id-wrapper" style="display: flex; flex-direction: column; align-items: flex-end; margin-right: 10px;">
+                                    <span id="userName" style="font-weight: bold; font-size: 0.9rem;"></span>
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <input type="text" id="myIdDisplay" readonly style="background: transparent; border: none; color: var(--text-muted); font-size: 0.7rem; width: 140px; text-align: right;" onclick="this.select()">
+                                        <button id="copyIdBtn" class="video-control-btn" style="color: var(--text-muted);" title="Copy My ID">
+                                            <i class="material-icons" style="font-size: 14px;">content_copy</i>
+                                        </button>
+                                    </div>
+                                </div>
                                 <img id="userAvatar" src="" alt="Avatar">
                             </div>
                         </div>
@@ -158,11 +166,26 @@
             <!-- Chat Area -->
             <aside class="chat-container">
                 <div class="chat-header">
-                    <h2>CHAT</h2>
+                    <h2 id="chatHeaderTitle">CHAT</h2>
+                    <button id="friendListBtn" class="chat-header-btn" title="Friends">
+                        <i class="material-icons">people_outline</i>
+                    </button>
                 </div>
                 <div id="chatMessages" class="chat-messages">
                     <div class="chat-messages-inner" id="chatMessagesInner">
                         <div class="system-message">Welcome to YELLOWCHAT. Click "Find Stranger" to start.</div>
+                    </div>
+                </div>
+
+                <div id="friendListArea" class="friend-list-area" style="display: none;">
+                    <div class="friend-search-area">
+                        <input type="text" id="friendSearchInput" placeholder="Enter Instagram ID or User ID...">
+                        <button id="friendSearchBtn" class="search-btn">
+                            <i class="material-icons">search</i>
+                        </button>
+                    </div>
+                    <div id="friendListInner" class="friend-list-inner">
+                        <!-- Friends will be listed here -->
                     </div>
                 </div>
                 <div class="chat-input-area">

@@ -106,12 +106,10 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         let joinedRoom = null;
 
         const docs = querySnapshot.docs;
-        // Shuffle or pick random to avoid everyone hitting the same first room
         const shuffledDocs = docs.sort(() => Math.random() - 0.5);
 
         for (const roomDoc of shuffledDocs) {
             const data = roomDoc.data();
-            // Basic activity check manually since we removed orderBy
             const lastActive = data.lastActivity || 0;
             if (data.callerUid !== auth.currentUser.uid && lastActive > activeTimeThreshold) {
                 try {
@@ -130,7 +128,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                         }
                     });
                     if (joinedRoom) break;
-                } catch (e) { console.warn("Join failed, trying next"); }
+                } catch (e) { console.warn("Join attempt failed, trying next"); }
             }
         }
 
@@ -140,7 +138,6 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             roomRef = joinedRoom.ref;
             await setupConnection(remoteVideoElement, myInfo, callbacks, joinedRoom.data.offer);
         } else {
-            // Create a new room
             isCaller = true;
             roomRef = doc(collection(db, "chatRooms"));
             roomId = roomRef.id;
@@ -148,8 +145,34 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         }
     } catch (err) {
         console.error("Error finding match:", err);
-        callbacks.onStatus("Error finding match. Try again.");
+        callbacks.onStatus("Searching..."); // Silently retry via main loop
+        // Ensure we reset isConnecting in main.js
     }
+}
+
+export async function startDirectCall(remoteVideoElement, myInfo, callbacks, targetRoomId, forcedIsCaller = null) {
+    if (peerConnection) await hangup();
+    
+    await initMedia(document.getElementById('localVideo'));
+
+    if (targetRoomId) {
+        roomId = targetRoomId;
+        roomRef = doc(db, "chatRooms", roomId);
+    } else {
+        roomRef = doc(collection(db, "chatRooms"));
+        roomId = roomRef.id;
+    }
+
+    if (forcedIsCaller !== null) {
+        isCaller = forcedIsCaller;
+    } else {
+        const snap = await getDoc(roomRef);
+        isCaller = !snap.exists() || snap.data().status !== "waiting";
+    }
+
+    // Reuse setupConnection for the actual WebRTC work
+    const remoteOffer = !isCaller ? (await getDoc(roomRef)).data().offer : null;
+    await setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffer);
 }
 
 async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffer = null) {
