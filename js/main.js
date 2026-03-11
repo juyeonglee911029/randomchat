@@ -275,25 +275,43 @@ async function startAutoMatching() {
     const attemptMatch = async () => {
         if (isMatched || isConnecting) return;
         isConnecting = true;
-        try { await findMatch(remoteVideo, myInfo, callbacks); } catch (e) { isConnecting = false; }
+        try { 
+            await findMatch(remoteVideo, myInfo, callbacks); 
+        } catch (e) { 
+            console.error("Match attempt failed:", e);
+            isConnecting = false; 
+            // Don't show error to user, just let the interval retry silently
+        }
     };
     await attemptMatch();
     autoMatchInterval = setInterval(async () => {
         if (!isMatched && !isConnecting) await attemptMatch();
         else if (isMatched) stopAutoMatching();
-    }, 6000);
+    }, 5000);
 }
 
 function stopAutoMatching() { if (autoMatchInterval) { clearInterval(autoMatchInterval); autoMatchInterval = null; } isConnecting = false; document.getElementById('matchingOverlay').style.display = 'none'; }
 
 const callbacks = {
     onStatus: (msg) => {
-        if (msg.includes("Error") || msg.includes("denied") || msg.includes("failed")) isConnecting = false;
+        console.log("Status Update:", msg);
+        
+        // Reset connection flag if we hit a failure
+        if (msg.includes("Error") || msg.includes("denied") || msg.includes("failed")) {
+            isConnecting = false;
+        }
+
         setStatus(msg, msg !== "Connected!");
+        
         if (msg === "Connected!") {
-            isMatched = true; isConnecting = false; stopAutoMatching();
+            isMatched = true; 
+            isConnecting = false; 
+            stopAutoMatching();
             const transitionOverlay = document.getElementById('transitionOverlay');
-            if (transitionOverlay) { transitionOverlay.style.display = 'flex'; setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); }
+            if (transitionOverlay) { 
+                transitionOverlay.style.display = 'flex'; 
+                setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); 
+            }
             hangupBtn.disabled = false; findMatchBtn.disabled = true; messageInput.disabled = false; sendBtn.disabled = false;
             addSystemMessage("Connected."); sendEffectUpdate({ mirror: isMirrored, brightness: currentBrightness });
         }

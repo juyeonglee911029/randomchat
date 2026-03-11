@@ -89,29 +89,26 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         return;
     }
 
-    callbacks.onStatus("Searching for a stranger...");
+    callbacks.onStatus("Searching...");
 
     try {
         const roomsRef = collection(db, "chatRooms");
-        const activeTimeThreshold = Date.now() - 15000; // 15s activity
+        const activeTimeThreshold = Date.now() - 15000;
         
-        // Simplified query: No orderBy to avoid Index requirement
         const q = query(
             roomsRef, 
             where("status", "==", "waiting"),
-            limit(20)
+            limit(30)
         );
         
         const querySnapshot = await getDocs(q);
         let joinedRoom = null;
 
-        const docs = querySnapshot.docs;
-        const shuffledDocs = docs.sort(() => Math.random() - 0.5);
+        const shuffledDocs = querySnapshot.docs.sort(() => Math.random() - 0.5);
 
         for (const roomDoc of shuffledDocs) {
             const data = roomDoc.data();
-            const lastActive = data.lastActivity || 0;
-            if (data.callerUid !== auth.currentUser.uid && lastActive > activeTimeThreshold) {
+            if (data.callerUid !== auth.currentUser.uid && (data.lastActivity || 0) > activeTimeThreshold) {
                 try {
                     await runTransaction(db, async (transaction) => {
                         const rSnap = await transaction.get(roomDoc.ref);
@@ -128,7 +125,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                         }
                     });
                     if (joinedRoom) break;
-                } catch (e) { console.warn("Join attempt failed, trying next"); }
+                } catch (e) {}
             }
         }
 
@@ -144,24 +141,17 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             await setupConnection(remoteVideoElement, myInfo, callbacks);
         }
     } catch (err) {
-        console.error("Error finding match:", err);
-        callbacks.onStatus("Searching..."); // Silently retry via main loop
-        // Ensure we reset isConnecting in main.js
+        console.error("Match error:", err);
+        throw err; // Let main.js handle reset
     }
 }
 
 export async function startDirectCall(remoteVideoElement, myInfo, callbacks, targetRoomId, forcedIsCaller = null) {
     if (peerConnection) await hangup();
-    
     await initMedia(document.getElementById('localVideo'));
 
-    if (targetRoomId) {
-        roomId = targetRoomId;
-        roomRef = doc(db, "chatRooms", roomId);
-    } else {
-        roomRef = doc(collection(db, "chatRooms"));
-        roomId = roomRef.id;
-    }
+    roomId = targetRoomId || doc(collection(db, "chatRooms")).id;
+    roomRef = doc(db, "chatRooms", roomId);
 
     if (forcedIsCaller !== null) {
         isCaller = forcedIsCaller;
@@ -170,8 +160,12 @@ export async function startDirectCall(remoteVideoElement, myInfo, callbacks, tar
         isCaller = !snap.exists() || snap.data().status !== "waiting";
     }
 
-    // Reuse setupConnection for the actual WebRTC work
-    const remoteOffer = !isCaller ? (await getDoc(roomRef)).data().offer : null;
+    let remoteOffer = null;
+    if (!isCaller) {
+        const snap = await getDoc(roomRef);
+        if (snap.exists()) remoteOffer = snap.data().offer;
+    }
+    
     await setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffer);
 }
 
@@ -179,31 +173,28 @@ async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffe
     peerConnection = new RTCPeerConnection(configuration);
     remoteCandidatesQueue = [];
 
-    // ICE Candidate handling
     peerConnection.onicecandidate = e => {
         if (!e.candidate || !roomRef) return;
-        const candidateCol = collection(roomRef, "candidates");
-        addDoc(candidateCol, {
+        addDoc(collection(roomRef, "candidates"), {
             ...e.candidate.toJSON(),
             type: isCaller ? "caller" : "callee",
             createdAt: Date.now()
         }).catch(() => {});
     };
 
-    // Track handling
     peerConnection.ontrack = e => {
-        console.log("Remote track received");
         const stream = e.streams[0] || new MediaStream([e.track]);
         remoteVideoElement.srcObject = stream;
         remoteStream = stream;
         remoteVideoElement.play().then(() => {
             callbacks.onStatus("Connected!");
+            if (roomRef) updateDoc(roomRef, { [isCaller ? 'callerConnected' : 'calleeConnected']: true }).catch(() => {});
         }).catch(() => {
             callbacks.onStatus("Connected!");
+            if (roomRef) updateDoc(roomRef, { [isCaller ? 'callerConnected' : 'calleeConnected']: true }).catch(() => {});
         });
     };
 
-    // Connection state
     peerConnection.oniceconnectionstatechange = () => {
         if (!peerConnection) return;
         if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
@@ -211,12 +202,10 @@ async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffe
         }
     };
 
-    // Add local tracks
     if (localStream) {
         localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
     }
 
-    // Signaling setup
     if (isCaller) {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
@@ -232,27 +221,28 @@ async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffe
             createdAt: Date.now()
         });
 
-        // Listen for Answer
         unsubRoom = onSnapshot(roomRef, async s => {
             const d = s.data();
             if (!d) return;
+            
             if (d.status === "joined" && d.answer && !peerConnection.currentRemoteDescription) {
-                console.log("Setting remote answer");
                 await peerConnection.setRemoteDescription(new RTCSessionDescription(d.answer));
-                if (callbacks.onPartnerSocial) {
-                    callbacks.onPartnerSocial(d.calleeInsta, d.calleeWhatsapp, { uid: d.calleeUid, name: d.calleeName });
-                }
+                if (callbacks.onPartnerSocial) callbacks.onPartnerSocial(d.calleeInsta, d.calleeWhatsapp);
                 processQueuedCandidates();
             }
+
             if (callbacks.onPartnerEffect) {
                 callbacks.onPartnerEffect({ mirror: d.calleeMirror, brightness: d.calleeBrightness });
             }
         });
     } else {
-        // Callee
-        if (callbacks.onPartnerSocial) {
-            callbacks.onPartnerSocial(remoteOffer.callerInsta, remoteOffer.callerWhatsapp, { uid: remoteOffer.callerUid, name: remoteOffer.callerName });
+        if (!remoteOffer) {
+            const snap = await getDoc(roomRef);
+            if (snap.exists()) remoteOffer = snap.data().offer;
+            else { callbacks.onDisconnect(); return; }
         }
+
+        if (callbacks.onPartnerSocial) callbacks.onPartnerSocial(remoteOffer.callerInsta, remoteOffer.callerWhatsapp);
         
         await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteOffer));
         const answer = await peerConnection.createAnswer();
@@ -263,7 +253,6 @@ async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffe
             lastActivity: Date.now()
         });
 
-        // Listen for effects only
         unsubRoom = onSnapshot(roomRef, s => {
             const d = s.data();
             if (!d) return;
@@ -275,15 +264,13 @@ async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffe
         processQueuedCandidates();
     }
 
-    // ICE Candidate Listener (Subcollection)
-    const candidateCol = collection(roomRef, "candidates");
-    unsubCandidates = onSnapshot(candidateCol, s => {
+    unsubCandidates = onSnapshot(collection(roomRef, "candidates"), s => {
         s.docChanges().forEach(c => {
             if (c.type === "added") {
                 const data = c.doc.data();
                 const targetType = isCaller ? "callee" : "caller";
                 if (data.type === targetType) {
-                    if (peerConnection.remoteDescription) {
+                    if (peerConnection && peerConnection.remoteDescription) {
                         peerConnection.addIceCandidate(new RTCIceCandidate(data)).catch(() => {});
                     } else {
                         remoteCandidatesQueue.push(data);
@@ -293,7 +280,6 @@ async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffe
         });
     });
 
-    // Heartbeat
     heartbeatInterval = setInterval(async () => {
         if (roomRef) await updateDoc(roomRef, { lastActivity: Date.now() }).catch(() => {});
     }, 5000);
@@ -317,7 +303,6 @@ export async function hangup() {
     if (roomId && roomRef) {
         stopChat();
         const currentRoomRef = roomRef;
-        // Background cleanup
         (async () => {
             try {
                 const candCol = collection(currentRoomRef, "candidates");
