@@ -106,6 +106,8 @@ async function init() {
         mirrorToggleBtn.addEventListener('click', () => {
             isMirrored = !isMirrored;
             mirrorToggleBtn.classList.toggle('active', isMirrored);
+            // Apply locally
+            localVideo.style.transform = isMirrored ? 'scaleX(-1)' : 'none';
             // This affects how PARTNER sees me
             sendEffectUpdate({ mirror: isMirrored });
         });
@@ -114,10 +116,24 @@ async function init() {
     if (brightnessSlider) {
         brightnessSlider.addEventListener('input', (e) => {
             currentBrightness = e.target.value;
+            // Apply locally
+            localVideo.style.filter = `brightness(${currentBrightness}%)`;
             // This affects how PARTNER sees me
             sendEffectUpdate({ brightness: currentBrightness });
         });
     }
+
+    // Escape key listener for matching
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (autoMatchInterval) {
+                stopAutoMatching();
+                hangup();
+                callbacks.onDisconnect();
+                addSystemMessage("Matching cancelled.");
+            }
+        }
+    });
 
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {

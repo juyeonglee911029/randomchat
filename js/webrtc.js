@@ -74,6 +74,17 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
     }
     
     callbacks.onStatus("Searching for a stranger...");
+
+    // Timeout to prevent infinite "waiting" if no room is found or connection fails to start
+    const matchTimeout = setTimeout(() => {
+        if (!isMatchedRoom) {
+            console.log("Match attempt timed out, retrying...");
+            callbacks.onDisconnect();
+            hangup();
+        }
+    }, 5000);
+
+    let isMatchedRoom = false;
     
     const roomsRef = collection(db, "chatRooms");
     let q;
@@ -108,6 +119,8 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
 
     peerConnection.addEventListener('track', event => {
         if (event.streams && event.streams[0]) {
+            isMatchedRoom = true;
+            clearTimeout(matchTimeout);
             remoteVideoElement.srcObject = event.streams[0];
             remoteStream = event.streams[0];
             remoteVideoElement.play().catch(e => console.warn("Remote video play failed:", e));
