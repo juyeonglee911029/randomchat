@@ -1,4 +1,4 @@
-import { db } from './firebase-config.js';
+import { db, auth } from './firebase-config.js';
 import { collection, doc, setDoc, addDoc, getDoc, updateDoc, onSnapshot, getDocs, query, where, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { setupChat, stopChat } from './chat.js';
 
@@ -146,8 +146,10 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         
         await updateDoc(roomRef, {
             status: "joined",
+            calleeUid: auth.currentUser?.uid || '',
             calleeGender: myInfo.gender || 'unspecified',
             calleeName: myInfo.name || 'Anonymous',
+            calleePhotoURL: auth.currentUser?.photoURL || '',
             calleeInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
             calleeWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : ''
         });
@@ -162,7 +164,11 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         
         const data = roomDoc.data();
         if(callbacks.onPartnerSocial) {
-            callbacks.onPartnerSocial(data.callerInsta, data.callerWhatsapp);
+            callbacks.onPartnerSocial(data.callerInsta, data.callerWhatsapp, {
+                uid: data.callerUid,
+                name: data.callerName,
+                photoURL: data.callerPhotoURL
+            });
         }
 
         const offer = data.offer;
@@ -222,8 +228,10 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
         const roomWithOffer = {
             offer: { type: offer.type, sdp: offer.sdp },
             status: "waiting",
+            callerUid: auth.currentUser?.uid || '',
             callerGender: myInfo.gender || 'unspecified',
             callerName: myInfo.name || 'Anonymous',
+            callerPhotoURL: auth.currentUser?.photoURL || '',
             callerInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
             callerWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : '',
             createdAt: Date.now()
@@ -257,7 +265,11 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
             }
             if (data.status === "joined") {
                 if (callbacks.onPartnerSocial) {
-                    callbacks.onPartnerSocial(data.calleeInsta, data.calleeWhatsapp);
+                    callbacks.onPartnerSocial(data.calleeInsta, data.calleeWhatsapp, {
+                        uid: data.calleeUid,
+                        name: data.calleeName,
+                        photoURL: data.calleePhotoURL
+                    });
                 }
             }
             // Handle partner effect updates

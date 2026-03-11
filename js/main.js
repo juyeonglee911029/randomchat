@@ -3,6 +3,7 @@ import { signInWithPopup, onAuthStateChanged, signOut, signInAnonymously } from 
 import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { initMedia, findMatch, hangup, setMicGain, sendEffectUpdate } from './webrtc.js';
 import { sendChatMessage } from './chat.js';
+import { searchUserById, addFriend, removeFriend, listenToFriends } from './friends.js';
 
 // DOM Elements
 const localVideo = document.getElementById('localVideo');
@@ -20,6 +21,18 @@ const chatMessagesInner = document.getElementById('chatMessagesInner');
 const remoteStatus = document.getElementById('remoteStatus');
 const partnerSocial = document.getElementById('partnerSocial');
 
+// New Friend System DOM Elements
+const friendListBtn = document.getElementById('friendListBtn');
+const chatHeaderTitle = document.getElementById('chatHeaderTitle');
+const friendSearchInput = document.getElementById('friendSearchInput');
+const friendSearchBtn = document.getElementById('friendSearchBtn');
+const chatMessages = document.getElementById('chatMessages');
+const friendListArea = document.getElementById('friendListArea');
+const friendListInner = document.getElementById('friendListInner');
+const addFriendBtn = document.getElementById('addFriendBtn');
+const myIdDisplay = document.getElementById('myIdDisplay');
+const copyIdBtn = document.getElementById('copyIdBtn');
+
 // Webcam Controls Elements
 const micToggleBtn = document.getElementById('micToggleBtn');
 const micVolumeSlider = document.getElementById('micVolumeSlider');
@@ -33,7 +46,6 @@ const userInfo = document.getElementById('userInfo');
 const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 
-const totalUsersEl = document.getElementById('totalUsers');
 const onlineUsersEl = document.getElementById('onlineUsers');
 
 // Gender Modal Elements
@@ -59,6 +71,9 @@ let isMicMuted = false;
 let isMirrored = false;
 let currentBrightness = 100;
 let statusTimeout = null;
+let currentPartner = null; // Store current partner info
+let isShowingFriends = false;
+let unsubFriends = null;
 
 // Initialization
 async function init() {
@@ -138,6 +153,8 @@ async function init() {
     // Auth State Listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            if (myIdDisplay) myIdDisplay.value = user.uid;
+            
             if (user.isAnonymous) {
                 googleLoginBtn.style.display = 'flex';
                 userInfo.style.display = 'none';
@@ -196,6 +213,12 @@ async function init() {
             }
             
             loadSettingsToUI();
+
+            // Start listening to friends
+            if (unsubFriends) unsubFriends();
+            unsubFriends = listenToFriends((friends) => {
+                updateFriendListUI(friends);
+            });
         } else {
             // Auto sign in anonymously if no user
             signInAnonymously(auth).catch(e => console.error("Anon auth failed", e));
@@ -493,5 +516,112 @@ function drag(e) {
         localVideoContainer.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
     }
 }
+
+// Friend System Logic
+function toggleFriendList() {
+    isShowingFriends = !isShowingFriends;
+    if (isShowingFriends) {
+        chatMessages.style.display = 'none';
+        friendListArea.style.display = 'block';
+        chatHeaderTitle.textContent = 'FRIENDS';
+        friendListBtn.querySelector('i').textContent = 'chat';
+    } else {
+        chatMessages.style.display = 'block';
+        friendListArea.style.display = 'none';
+        chatHeaderTitle.textContent = 'CHAT';
+        friendListBtn.querySelector('i').textContent = 'people_outline';
+    }
+}
+
+function updateFriendListUI(friends) {
+    friendListInner.innerHTML = '';
+    if (friends.length === 0) {
+        friendListInner.innerHTML = '<div class="system-message">Your friend list is empty.</div>';
+        return;
+    }
+
+    friends.forEach(friend => {
+        const item = document.createElement('div');
+        item.className = 'friend-item';
+        item.innerHTML = `
+            <img src="${friend.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar">
+            <div class="friend-info">
+                <div class="friend-name">${friend.name}</div>
+                <div class="friend-status">Added on ${new Date(friend.addedAt).toLocaleDateString()}</div>
+            </div>
+            <div class="friend-actions">
+                <button class="friend-action-btn delete" title="Remove Friend" data-id="${friend.id}">
+                    <i class="material-icons">person_remove</i>
+                </button>
+            </div>
+        `;
+        
+        item.querySelector('.delete').addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (confirm(`Remove ${friend.name} from friends?`)) {
+                removeFriend(friend.id);
+            }
+        });
+
+        friendListInner.appendChild(item);
+    });
+}
+
+async function handleFriendSearch() {
+    const userId = friendSearchInput.value.trim();
+    if (!userId) return;
+    
+    friendSearchBtn.disabled = true;
+    const user = await searchUserById(userId);
+    friendSearchBtn.disabled = false;
+
+    if (user) {
+        if (confirm(`User found: ${user.name || 'Anonymous'}. Add as friend?`)) {
+            addFriend(user);
+            friendSearchInput.value = '';
+        }
+    } else {
+        alert("User not found. Please check the ID.");
+    }
+}
+
+friendListBtn.addEventListener('click', toggleFriendList);
+friendSearchBtn.addEventListener('click', handleFriendSearch);
+friendSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleFriendSearch(); });
+
+addFriendBtn.addEventListener('click', () => {
+    if (currentPartner) {
+        addFriend(currentPartner);
+    } else {
+        alert("No active partner to add.");
+    }
+});
+
+copyIdBtn.addEventListener('click', () => {
+    myIdDisplay.select();
+    document.execCommand('copy');
+    alert("ID copied to clipboard!");
+});
+
+// Update currentPartner in callbacks
+const originalOnPartnerSocial = callbacks.onPartnerSocial;
+callbacks.onPartnerSocial = (instaId, whatsappNum, partnerInfo) => {
+    originalOnPartnerSocial(instaId, whatsappNum);
+    if (partnerInfo && partnerInfo.uid) {
+        currentPartner = {
+            id: partnerInfo.uid,
+            name: partnerInfo.name,
+            photoURL: partnerInfo.photoURL
+        };
+        addFriendBtn.style.display = 'flex';
+    }
+};
+
+const originalOnDisconnect = callbacks.onDisconnect;
+callbacks.onDisconnect = () => {
+    originalOnDisconnect();
+    currentPartner = null;
+    addFriendBtn.style.display = 'none';
+};
 
 init();
