@@ -302,9 +302,10 @@ body {
 .local-wrapper:active {
     cursor: grabbing;
 }
-
 .local-wrapper:hover {
-    /* Hover enlargement removed as requested */
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    z-index: 51;
 }
 .video-controls-bottom {
     position: absolute;
@@ -314,6 +315,12 @@ body {
     align-items: center;
     gap: 15px;
     z-index: 100;
+}
+
+.video-controls-bottom-inner {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     background: rgba(0, 0, 0, 0.6);
     padding: 10px 20px;
     border-radius: 40px;
@@ -464,8 +471,8 @@ body {
 }
 
 .social-btn {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -473,11 +480,12 @@ body {
     text-decoration: none;
     transition: transform 0.2s, filter 0.2s;
     border: none; 
+    overflow: visible;
 }
 
 .social-svg-icon {
-    width: 38px; 
-    height: 38px;
+    width: 41px; 
+    height: 41px;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 
@@ -796,13 +804,13 @@ body {
     }
 
     .social-btn {
-        width: 38px; 
-        height: 38px;
+        width: 34px; 
+        height: 34px;
     }
 
     .social-svg-icon {
-        width: 32px; 
-        height: 32px;
+        width: 35px; 
+        height: 35px;
     }
 
     #sendBtn {
