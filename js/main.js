@@ -344,7 +344,13 @@ function stopAutoMatching() {
 
 const callbacks = {
     onStatus: (msg) => {
-        console.log("Status:", msg);
+        console.log("Status update:", msg);
+        
+        // Reset connection flag if we hit an error or disconnect during search
+        if (msg.includes("Error") || msg.includes("denied") || msg.includes("failed")) {
+            isConnecting = false;
+        }
+
         setStatus(msg, msg !== "Connected!");
         
         if (msg === "Connected!") {

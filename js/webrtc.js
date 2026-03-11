@@ -93,23 +93,27 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
 
     try {
         const roomsRef = collection(db, "chatRooms");
-        const activeTimeThreshold = Date.now() - 10000; // Only rooms active in last 10s
+        const activeTimeThreshold = Date.now() - 15000; // 15s activity
         
-        // Find a room to join
+        // Simplified query: No orderBy to avoid Index requirement
         const q = query(
             roomsRef, 
             where("status", "==", "waiting"),
-            orderBy("lastActivity", "desc"),
-            limit(10)
+            limit(20)
         );
         
         const querySnapshot = await getDocs(q);
         let joinedRoom = null;
 
-        for (const roomDoc of querySnapshot.docs) {
+        const docs = querySnapshot.docs;
+        // Shuffle or pick random to avoid everyone hitting the same first room
+        const shuffledDocs = docs.sort(() => Math.random() - 0.5);
+
+        for (const roomDoc of shuffledDocs) {
             const data = roomDoc.data();
-            if (data.callerUid !== auth.currentUser.uid && (data.lastActivity || 0) > activeTimeThreshold) {
-                // Try atomic join
+            // Basic activity check manually since we removed orderBy
+            const lastActive = data.lastActivity || 0;
+            if (data.callerUid !== auth.currentUser.uid && lastActive > activeTimeThreshold) {
                 try {
                     await runTransaction(db, async (transaction) => {
                         const rSnap = await transaction.get(roomDoc.ref);
@@ -126,7 +130,7 @@ export async function findMatch(remoteVideoElement, myInfo, callbacks) {
                         }
                     });
                     if (joinedRoom) break;
-                } catch (e) { console.warn("Transaction failed, trying next room"); }
+                } catch (e) { console.warn("Join failed, trying next"); }
             }
         }
 
