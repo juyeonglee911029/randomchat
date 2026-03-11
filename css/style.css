@@ -285,7 +285,9 @@ body {
     position: absolute;
     bottom: 20px;
     right: 20px; /* Moved to right side */
-    width: 240px; 
+    width: 30%;
+    max-width: 400px;
+    min-width: 150px;
     aspect-ratio: 4/3;
     border: none;
     border-radius: 12px;
@@ -294,7 +296,7 @@ body {
     background-color: #222;
     z-index: 50;
     cursor: grab;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.3s ease;
+    transition: width 0.3s ease;
 }
 
 .local-wrapper:active {
@@ -302,10 +304,8 @@ body {
 }
 
 .local-wrapper:hover {
-    width: 360px; 
-    transform: scale(1.05);
+    /* Hover enlargement removed as requested */
 }
-
 .video-controls-bottom {
     position: absolute;
     bottom: 20px;

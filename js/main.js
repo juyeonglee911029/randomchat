@@ -431,8 +431,49 @@ function drag(e) {
         e.preventDefault();
         const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
-        currentX = clientX - initialX; currentY = clientY - initialY;
-        xOffset = currentX; yOffset = currentY;
+        
+        let targetX = clientX - initialX;
+        let targetY = clientY - initialY;
+
+        // Boundary restriction logic
+        const container = document.querySelector('.video-container');
+        const wrapper = localVideoContainer;
+        
+        if (container && wrapper) {
+            const containerRect = container.getBoundingClientRect();
+            const wrapperRect = wrapper.getBoundingClientRect();
+
+            // Calculate the initial position relative to the container
+            // Since .local-wrapper has bottom: 20px; right: 20px;
+            // The transform (currentX, currentY) is added to this initial position.
+            
+            // We need to ensure that:
+            // containerRect.left <= wrapperRect.left + deltaX
+            // containerRect.right >= wrapperRect.right + deltaX
+            // containerRect.top <= wrapperRect.top + deltaY
+            // containerRect.bottom >= wrapperRect.bottom + deltaY
+
+            // However, a simpler way is to clamp the absolute position and then convert back to relative transform.
+            // But even simpler: just clamp currentX and currentY based on available space.
+            
+            // The wrapper's position without transform:
+            const initialLeft = containerRect.right - wrapperRect.width - 20;
+            const initialTop = containerRect.bottom - wrapperRect.height - 20;
+
+            // Min and Max transform values
+            const minX = containerRect.left - initialLeft;
+            const maxX = containerRect.right - (initialLeft + wrapperRect.width);
+            const minY = containerRect.top - initialTop;
+            const maxY = containerRect.bottom - (initialTop + wrapperRect.height);
+
+            targetX = Math.min(Math.max(targetX, minX), maxX);
+            targetY = Math.min(Math.max(targetY, minY), maxY);
+        }
+
+        currentX = targetX;
+        currentY = targetY;
+        xOffset = currentX;
+        yOffset = currentY;
         localVideoContainer.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
     }
 }
