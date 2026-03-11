@@ -304,31 +304,36 @@ function setStatus(msg, autoHide = true) {
     remoteStatus.style.display = 'block';
     if (autoHide) {
         statusTimeout = setTimeout(() => {
+            remoteStatus.textContent = '';
             remoteStatus.style.display = 'none';
-        }, 3000); // Auto hide after 3 seconds
+        }, 3000);
     }
 }
 
 async function startAutoMatching() {
     if (autoMatchInterval) return;
     document.getElementById('matchingOverlay').style.display = 'flex';
+    
     const attemptMatch = async () => {
-        // Only attempt if not already matched AND not in the middle of a connection attempt
-        if (isMatched || isConnecting) {
-            console.log("Skipping match attempt: matched=" + isMatched + ", connecting=" + isConnecting);
-            return;
-        }
+        if (isMatched || isConnecting) return;
         
         isConnecting = true;
-        console.log("Attempting to find match...");
-        await findMatch(remoteVideo, myInfo, callbacks);
+        try {
+            await findMatch(remoteVideo, myInfo, callbacks);
+        } catch (e) {
+            console.error("Match attempt error:", e);
+            isConnecting = false;
+        }
     };
-    
+
     await attemptMatch();
     autoMatchInterval = setInterval(async () => {
-        if (!isMatched && !isConnecting) await attemptMatch();
-        else if (isMatched) stopAutoMatching();
-    }, 5000); // Slightly increased interval for stability
+        if (!isMatched && !isConnecting) {
+            await attemptMatch();
+        } else if (isMatched) {
+            stopAutoMatching();
+        }
+    }, 6000); // Wait 6s between attempts to allow signaling
 }
 
 function stopAutoMatching() {
@@ -339,71 +344,80 @@ function stopAutoMatching() {
 
 const callbacks = {
     onStatus: (msg) => {
-        console.log("Status update:", msg);
+        console.log("Status:", msg);
+        setStatus(msg, msg !== "Connected!");
+        
         if (msg === "Connected!") {
-            setStatus(msg, true);
             isMatched = true;
             isConnecting = false;
             stopAutoMatching();
+            
             const transitionOverlay = document.getElementById('transitionOverlay');
             if (transitionOverlay) {
                 transitionOverlay.style.display = 'flex';
                 setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500);
             }
+            
             hangupBtn.disabled = false;
             findMatchBtn.disabled = true;
             messageInput.disabled = false;
             sendBtn.disabled = false;
             addSystemMessage("Connected to a stranger.");
             
-            // Sync initial effects on connect
             sendEffectUpdate({ mirror: isMirrored, brightness: currentBrightness });
-        } else {
-            setStatus(msg, true);
         }
     },
     onDisconnect: () => {
-        console.log("Disconnected callback triggered");
+        console.log("Disconnecting...");
         isMatched = false;
         isConnecting = false;
-        stopAutoMatching();
+        
         remoteVideo.srcObject = null;
         remoteVideo.style.filter = 'none';
         remoteVideo.style.transform = 'none';
-        setStatus("Stranger has disconnected.", true);
-        const partnerInfo = document.getElementById('partnerInfo');
-        if (partnerInfo) partnerInfo.style.display = 'none';
-        partnerSocial.style.display = 'none';
+        
+        setStatus("Stranger disconnected.");
+        const pInfo = document.getElementById('partnerInfo');
+        if (pInfo) pInfo.style.display = 'none';
+        if (partnerSocial) partnerSocial.style.display = 'none';
+        
         hangupBtn.disabled = true;
         findMatchBtn.disabled = false;
         messageInput.disabled = true;
         sendBtn.disabled = true;
-        addSystemMessage("Stranger has disconnected.");
-        hangup();
+        addSystemMessage("Stranger disconnected.");
+        
+        hangup(); // WebRTC cleanup
     },
     onMessage: (msg) => addChatMessage(msg.text, msg.isMe),
-    onPartnerSocial: (instaId, whatsappNum) => {
-        const partnerInfoDiv = document.getElementById('partnerInfo');
-        const partnerInstaIdTop = document.getElementById('partnerInstaIdTop');
-        const partnerSocialDiv = document.getElementById('partnerSocial');
-        if (instaId) {
-            document.getElementById('partnerInstaLink').href = `https://instagram.com/${instaId}`;
-            document.getElementById('partnerInstaLink').style.display = 'flex';
-            if (partnerInfoDiv) { partnerInfoDiv.style.display = 'block'; partnerInstaIdTop.textContent = instaId; }
+    onPartnerSocial: (insta, wa, info) => {
+        const pInfo = document.getElementById('partnerInfo');
+        const pInstaId = document.getElementById('partnerInstaIdTop');
+        const pSocial = document.getElementById('partnerSocial');
+        
+        if (insta || wa) {
+            if (pInfo) {
+                pInfo.style.display = 'block';
+                if (pInstaId) pInstaId.textContent = insta || 'Stranger';
+            }
+            if (pSocial) {
+                pSocial.style.display = 'flex';
+                const instLink = document.getElementById('partnerInstaLink');
+                const waLink = document.getElementById('partnerWhatsappLink');
+                if (instLink) {
+                    instLink.href = `https://instagram.com/${insta}`;
+                    instLink.style.display = insta ? 'flex' : 'none';
+                }
+                if (waLink) {
+                    waLink.href = `https://wa.me/${wa.replace(/[^\d+]/g, '')}`;
+                    waLink.style.display = wa ? 'flex' : 'none';
+                }
+            }
         }
-        if (whatsappNum) {
-            document.getElementById('partnerWhatsappLink').href = `https://wa.me/${whatsappNum.replace(/[^\d+]/g, '')}`;
-            document.getElementById('partnerWhatsappLink').style.display = 'flex';
-        }
-        partnerSocialDiv.style.display = (instaId || whatsappNum) ? 'flex' : 'none';
     },
     onPartnerEffect: (data) => {
-        if (data.mirror !== undefined) {
-            remoteVideo.style.transform = data.mirror ? 'scaleX(-1)' : 'none';
-        }
-        if (data.brightness !== undefined) {
-            remoteVideo.style.filter = `brightness(${data.brightness}%)`;
-        }
+        if (data.mirror !== undefined) remoteVideo.style.transform = data.mirror ? 'scaleX(-1)' : 'none';
+        if (data.brightness !== undefined) remoteVideo.style.filter = `brightness(${data.brightness}%)`;
     }
 };
 

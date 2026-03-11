@@ -13,12 +13,13 @@ YELLOWCHAT is a real-time random video chat application built with framework-les
 - **Animations:** Floating logo, matching overlay, and transition effects.
 - **Premium Effects:** Subtle noise texture, multi-layered drop shadows, and glow effects on interactive elements.
 
-## Recent Changes (March 10, 2026)
-- **Header:** Modified to hide Google user information (#userInfo) on mobile devices to save space and improve focus on controls.
-- **UI Layout:** 
-    - Moved local video (.local-wrapper) to the bottom-right corner.
-    - Repositioned video controls (.video-controls-bottom) to stay on the bottom-left, ensuring they are opposite to the video logo overlay (top-right).
-    - On mobile, ensured elements don't overlap by positioning them in opposite corners.
+## Recent Changes (March 11, 2026)
+- **Robust WebRTC Architecture (Omegle-style):**
+    - **Atomic Joining:** Implemented Firestore Transactions (`runTransaction`) to ensure only one user can join a waiting room, eliminating race conditions where three people end up in one room.
+    - **Signaling Subcollections:** Moved ICE candidates to a dedicated `candidates` subcollection. This ensures faster updates and prevents the main room document from hitting size limits.
+    - **Safe ICE Queuing:** Added a robust queuing mechanism for remote ICE candidates that arrive before the WebRTC handshake is ready to receive them.
+    - **Synchronized Cleanup:** Improved `hangup()` to thoroughly delete rooms and all related signaling data in the background.
+    - **UI Stability:** Refined the matching loop to prevent it from interrupting active connection attempts, ensuring a smoother "Connecting..." phase.
 
 ## Implementation Steps
 1.  Identify `#userInfo` in CSS and apply `display: none !important` within the 768px media query.

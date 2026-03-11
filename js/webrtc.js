@@ -1,5 +1,9 @@
-import { db } from './firebase-config.js';
-import { collection, doc, setDoc, addDoc, getDoc, updateDoc, onSnapshot, getDocs, query, where, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { db, auth } from './firebase-config.js';
+import { 
+    collection, doc, setDoc, addDoc, getDoc, updateDoc, onSnapshot, 
+    getDocs, query, where, limit, deleteDoc, orderBy, serverTimestamp,
+    runTransaction
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { setupChat, stopChat } from './chat.js';
 
 let peerConnection = null;
@@ -8,9 +12,10 @@ let remoteStream = null;
 let roomId = null;
 let roomRef = null;
 let unsubRoom = null;
-let unsubCallerCandidates = null;
-let unsubCalleeCandidates = null;
+let unsubCandidates = null;
 let isCaller = false;
+let heartbeatInterval = null;
+let remoteCandidatesQueue = [];
 
 const configuration = {
     iceServers: [
@@ -19,25 +24,42 @@ const configuration = {
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
-    ]
+    ],
+    iceCandidatePoolSize: 10,
 };
 
 export async function initMedia(localVideoElement) {
+    if (localStream && localStream.active) {
+        if (localVideoElement && localVideoElement.srcObject !== localStream) {
+            localVideoElement.srcObject = localStream;
+        }
+        return { success: true };
+    }
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideoElement.srcObject = localStream;
-        return true;
+        if (localVideoElement) {
+            localVideoElement.srcObject = localStream;
+            localVideoElement.play().catch(() => {});
+        }
+        return { success: true };
     } catch (error) {
-        console.error("Error accessing media devices.", error);
-        return false;
+        console.warn("Media access failed, retrying with video only:", error);
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            if (localVideoElement) {
+                localVideoElement.srcObject = localStream;
+                localVideoElement.play().catch(() => {});
+            }
+            return { success: true, warning: "Mic failed" };
+        } catch (e) {
+            return { success: false, message: "Camera access denied or not found." };
+        }
     }
 }
 
 export function setMicGain(gain) {
     if (localStream) {
-        localStream.getAudioTracks().forEach(track => {
-            track.enabled = gain > 0;
-        });
+        localStream.getAudioTracks().forEach(track => { track.enabled = gain > 0; });
     }
 }
 
@@ -52,293 +74,237 @@ export async function sendEffectUpdate(effects) {
             if (effects.brightness !== undefined) updateData.calleeBrightness = effects.brightness;
         }
         if (Object.keys(updateData).length > 0) {
-            await updateDoc(roomRef, updateData);
+            await updateDoc(roomRef, updateData).catch(() => {});
         }
     }
 }
 
 export async function findMatch(remoteVideoElement, myInfo, callbacks) {
-    if (peerConnection) {
-        await hangup();
-    }
+    if (peerConnection) await hangup();
     
-    if (!localStream) {
-        callbacks.onStatus("Requesting camera access...");
-        const localVideoElement = document.getElementById('localVideo');
-        const success = await initMedia(localVideoElement);
-        if (!success) {
-            callbacks.onStatus("Camera permission required to match.");
-            callbacks.onDisconnect();
-            return;
-        }
+    const localVideoElement = document.getElementById('localVideo');
+    const mediaResult = await initMedia(localVideoElement);
+    if (!mediaResult.success) {
+        callbacks.onStatus(mediaResult.message);
+        return;
     }
-    
+
     callbacks.onStatus("Searching for a stranger...");
 
-    // Timeout to prevent infinite "waiting" if no room is found or connection fails to start
-    const matchTimeout = setTimeout(() => {
-        if (!isMatchedRoom) {
-            console.log("Match attempt timed out, retrying...");
-            callbacks.onDisconnect();
-            hangup();
+    try {
+        const roomsRef = collection(db, "chatRooms");
+        const activeTimeThreshold = Date.now() - 10000; // Only rooms active in last 10s
+        
+        // Find a room to join
+        const q = query(
+            roomsRef, 
+            where("status", "==", "waiting"),
+            orderBy("lastActivity", "desc"),
+            limit(10)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        let joinedRoom = null;
+
+        for (const roomDoc of querySnapshot.docs) {
+            const data = roomDoc.data();
+            if (data.callerUid !== auth.currentUser.uid && (data.lastActivity || 0) > activeTimeThreshold) {
+                // Try atomic join
+                try {
+                    await runTransaction(db, async (transaction) => {
+                        const rSnap = await transaction.get(roomDoc.ref);
+                        if (rSnap.exists() && rSnap.data().status === "waiting") {
+                            transaction.update(roomDoc.ref, { 
+                                status: "joined",
+                                calleeUid: auth.currentUser.uid,
+                                calleeName: myInfo.name || 'Anonymous',
+                                calleeInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
+                                calleeWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : '',
+                                lastActivity: Date.now()
+                            });
+                            joinedRoom = { id: roomDoc.id, ref: roomDoc.ref, data: rSnap.data() };
+                        }
+                    });
+                    if (joinedRoom) break;
+                } catch (e) { console.warn("Transaction failed, trying next room"); }
+            }
         }
-    }, 15000); // Increased to 15 seconds
 
-    let isMatchedRoom = false;
-    
-    const roomsRef = collection(db, "chatRooms");
-    let q;
-    if (myInfo.prefGender !== "any") {
-        q = query(roomsRef, where("status", "==", "waiting"), where("callerGender", "==", myInfo.prefGender), limit(1));
-    } else {
-        q = query(roomsRef, where("status", "==", "waiting"), limit(1));
-    }
-    
-    const querySnapshot = await getDocs(q);
-    
-    peerConnection = new RTCPeerConnection(configuration);
-    
-    const pendingLocalCandidates = [];
-    const remoteCandidatesQueue = [];
-
-    peerConnection.addEventListener('icecandidate', event => {
-        if (!event.candidate) { return; }
-        if (roomRef) {
-            const candidatesCollection = isCaller ? 'callerCandidates' : 'calleeCandidates';
-            addDoc(collection(roomRef, candidatesCollection), event.candidate.toJSON());
+        if (joinedRoom) {
+            isCaller = false;
+            roomId = joinedRoom.id;
+            roomRef = joinedRoom.ref;
+            await setupConnection(remoteVideoElement, myInfo, callbacks, joinedRoom.data.offer);
         } else {
-            pendingLocalCandidates.push(event.candidate);
+            // Create a new room
+            isCaller = true;
+            roomRef = doc(collection(db, "chatRooms"));
+            roomId = roomRef.id;
+            await setupConnection(remoteVideoElement, myInfo, callbacks);
         }
-    });
-
-    if (localStream) {
-        localStream.getTracks().forEach(track => {
-            peerConnection.addTrack(track, localStream);
-        });
+    } catch (err) {
+        console.error("Error finding match:", err);
+        callbacks.onStatus("Error finding match. Try again.");
     }
+}
 
-    peerConnection.addEventListener('track', event => {
-        console.log("Remote track received:", event.track.kind);
-        const stream = event.streams[0] || new MediaStream([event.track]);
-        
-        isMatchedRoom = true;
-        clearTimeout(matchTimeout);
-        
+async function setupConnection(remoteVideoElement, myInfo, callbacks, remoteOffer = null) {
+    peerConnection = new RTCPeerConnection(configuration);
+    remoteCandidatesQueue = [];
+
+    // ICE Candidate handling
+    peerConnection.onicecandidate = e => {
+        if (!e.candidate || !roomRef) return;
+        const candidateCol = collection(roomRef, "candidates");
+        addDoc(candidateCol, {
+            ...e.candidate.toJSON(),
+            type: isCaller ? "caller" : "callee",
+            createdAt: Date.now()
+        }).catch(() => {});
+    };
+
+    // Track handling
+    peerConnection.ontrack = e => {
+        console.log("Remote track received");
+        const stream = e.streams[0] || new MediaStream([e.track]);
         remoteVideoElement.srcObject = stream;
         remoteStream = stream;
-        
         remoteVideoElement.play().then(() => {
-            console.log("Remote video playing");
             callbacks.onStatus("Connected!");
-        }).catch(e => {
-            console.warn("Remote video play failed:", e);
-            // Still signal connected even if play() fails (e.g. autoplay block)
+        }).catch(() => {
             callbacks.onStatus("Connected!");
         });
-    });
-    
-    peerConnection.addEventListener('connectionstatechange', event => {
-        console.log("Connection state:", peerConnection.connectionState);
-        if (peerConnection.connectionState === 'failed') {
+    };
+
+    // Connection state
+    peerConnection.oniceconnectionstatechange = () => {
+        if (!peerConnection) return;
+        if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
             callbacks.onDisconnect();
-            hangup();
-        } else if (peerConnection.connectionState === 'disconnected') {
-            callbacks.onStatus("Reconnecting...");
         }
-    });
+    };
 
-    if (!querySnapshot.empty) {
-        isCaller = false;
-        const roomDoc = querySnapshot.docs[0];
-        roomId = roomDoc.id;
-        roomRef = doc(db, "chatRooms", roomId);
-        
-        await updateDoc(roomRef, {
-            status: "joined",
-            calleeGender: myInfo.gender || 'unspecified',
-            calleeName: myInfo.name || 'Anonymous',
-            calleeInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
-            calleeWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : ''
-        });
+    // Add local tracks
+    if (localStream) {
+        localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    }
 
-        // Add pending local candidates for Callee
-        pendingLocalCandidates.forEach(candidate => {
-            addDoc(collection(roomRef, 'calleeCandidates'), candidate.toJSON());
-        });
-        pendingLocalCandidates.length = 0;
-
-        setupChat(roomId, callbacks.onMessage);
-        
-        const data = roomDoc.data();
-        if(callbacks.onPartnerSocial) {
-            callbacks.onPartnerSocial(data.callerInsta, data.callerWhatsapp);
-        }
-
-        const offer = data.offer;
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-        
-        while (remoteCandidatesQueue.length > 0) {
-            const candidate = remoteCandidatesQueue.shift();
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        }
-
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        
-        await updateDoc(roomRef, { answer: { type: answer.type, sdp: answer.sdp } });
-        
-        unsubRoom = onSnapshot(roomRef, snapshot => {
-            const data = snapshot.data();
-            if (!snapshot.exists() || !data) {
-                callbacks.onDisconnect();
-                hangup();
-                return;
-            }
-            // Handle partner effect updates
-            if (callbacks.onPartnerEffect) {
-                callbacks.onPartnerEffect({
-                    mirror: data.callerMirror,
-                    brightness: data.callerBrightness
-                });
-            }
-        });
-
-        unsubCallerCandidates = onSnapshot(collection(roomRef, 'callerCandidates'), snapshot => {
-            snapshot.docChanges().forEach(async change => {
-                if (change.type === 'added') {
-                    let candidateData = change.doc.data();
-                    try {
-                        if (peerConnection.remoteDescription) {
-                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
-                        } else {
-                            remoteCandidatesQueue.push(candidateData);
-                        }
-                    } catch (e) {
-                        console.error("Error adding received ice candidate", e);
-                    }
-                }
-            });
-        });
-        
-    } else {
-        isCaller = true;
-        roomRef = doc(collection(db, "chatRooms"));
-        roomId = roomRef.id;
-        
+    // Signaling setup
+    if (isCaller) {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         
-        const roomWithOffer = {
+        await setDoc(roomRef, {
             offer: { type: offer.type, sdp: offer.sdp },
             status: "waiting",
-            callerGender: myInfo.gender || 'unspecified',
+            callerUid: auth.currentUser.uid,
             callerName: myInfo.name || 'Anonymous',
             callerInsta: myInfo.showInfo ? (myInfo.insta || '') : '',
             callerWhatsapp: myInfo.showInfo ? (myInfo.whatsapp || '') : '',
+            lastActivity: Date.now(),
             createdAt: Date.now()
-        };
-        
-        await setDoc(roomRef, roomWithOffer);
-        
-        pendingLocalCandidates.forEach(candidate => {
-            addDoc(collection(roomRef, 'callerCandidates'), candidate.toJSON());
         });
-        pendingLocalCandidates.length = 0;
 
-        setupChat(roomId, callbacks.onMessage);
-        
-        unsubRoom = onSnapshot(roomRef, async snapshot => {
-            const data = snapshot.data();
-            if (!data) {
-                callbacks.onDisconnect();
-                hangup();
-                return;
-            }
-            
-            if (!peerConnection.currentRemoteDescription && data.answer) {
-                const rtcSessionDescription = new RTCSessionDescription(data.answer);
-                await peerConnection.setRemoteDescription(rtcSessionDescription);
-                
-                while (remoteCandidatesQueue.length > 0) {
-                    const candidate = remoteCandidatesQueue.shift();
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                }
-            }
-            if (data.status === "joined") {
+        // Listen for Answer
+        unsubRoom = onSnapshot(roomRef, async s => {
+            const d = s.data();
+            if (!d) return;
+            if (d.status === "joined" && d.answer && !peerConnection.currentRemoteDescription) {
+                console.log("Setting remote answer");
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(d.answer));
                 if (callbacks.onPartnerSocial) {
-                    callbacks.onPartnerSocial(data.calleeInsta, data.calleeWhatsapp);
+                    callbacks.onPartnerSocial(d.calleeInsta, d.calleeWhatsapp, { uid: d.calleeUid, name: d.calleeName });
                 }
+                processQueuedCandidates();
             }
-            // Handle partner effect updates
             if (callbacks.onPartnerEffect) {
-                callbacks.onPartnerEffect({
-                    mirror: data.calleeMirror,
-                    brightness: data.calleeBrightness
-                });
+                callbacks.onPartnerEffect({ mirror: d.calleeMirror, brightness: d.calleeBrightness });
+            }
+        });
+    } else {
+        // Callee
+        if (callbacks.onPartnerSocial) {
+            callbacks.onPartnerSocial(remoteOffer.callerInsta, remoteOffer.callerWhatsapp, { uid: remoteOffer.callerUid, name: remoteOffer.callerName });
+        }
+        
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteOffer));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        await updateDoc(roomRef, { 
+            answer: { type: answer.type, sdp: answer.sdp },
+            lastActivity: Date.now()
+        });
+
+        // Listen for effects only
+        unsubRoom = onSnapshot(roomRef, s => {
+            const d = s.data();
+            if (!d) return;
+            if (callbacks.onPartnerEffect) {
+                callbacks.onPartnerEffect({ mirror: d.callerMirror, brightness: d.callerBrightness });
             }
         });
         
-        unsubCalleeCandidates = onSnapshot(collection(roomRef, 'calleeCandidates'), snapshot => {
-            snapshot.docChanges().forEach(async change => {
-                if (change.type === 'added') {
-                    let candidateData = change.doc.data();
-                    try {
-                        if (peerConnection.remoteDescription) {
-                            await peerConnection.addIceCandidate(new RTCIceCandidate(candidateData));
-                        } else {
-                            remoteCandidatesQueue.push(candidateData);
-                        }
-                    } catch (e) {
-                        console.error("Error adding received ice candidate", e);
+        processQueuedCandidates();
+    }
+
+    // ICE Candidate Listener (Subcollection)
+    const candidateCol = collection(roomRef, "candidates");
+    unsubCandidates = onSnapshot(candidateCol, s => {
+        s.docChanges().forEach(c => {
+            if (c.type === "added") {
+                const data = c.doc.data();
+                const targetType = isCaller ? "callee" : "caller";
+                if (data.type === targetType) {
+                    if (peerConnection.remoteDescription) {
+                        peerConnection.addIceCandidate(new RTCIceCandidate(data)).catch(() => {});
+                    } else {
+                        remoteCandidatesQueue.push(data);
                     }
                 }
-            });
+            }
         });
+    });
+
+    // Heartbeat
+    heartbeatInterval = setInterval(async () => {
+        if (roomRef) await updateDoc(roomRef, { lastActivity: Date.now() }).catch(() => {});
+    }, 5000);
+
+    setupChat(roomId, callbacks.onMessage);
+}
+
+function processQueuedCandidates() {
+    if (!peerConnection || !peerConnection.remoteDescription) return;
+    while (remoteCandidatesQueue.length > 0) {
+        const cand = remoteCandidatesQueue.shift();
+        peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
     }
 }
 
 export async function hangup() {
-    if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-    }
-    
+    if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
     if (unsubRoom) { unsubRoom(); unsubRoom = null; }
-    if (unsubCallerCandidates) { unsubCallerCandidates(); unsubCallerCandidates = null; }
-    if (unsubCalleeCandidates) { unsubCalleeCandidates(); unsubCalleeCandidates = null; }
+    if (unsubCandidates) { unsubCandidates(); unsubCandidates = null; }
     
-    if (roomId) {
+    if (roomId && roomRef) {
         stopChat();
-        if (roomRef) {
+        const currentRoomRef = roomRef;
+        // Background cleanup
+        (async () => {
             try {
-                const roomDoc = await getDoc(roomRef);
-                if (roomDoc.exists()) {
-                    const messagesRef = collection(roomRef, "messages");
-                    const messagesSnap = await getDocs(messagesRef);
-                    messagesSnap.forEach((docSnap) => {
-                        deleteDoc(docSnap.ref);
-                    });
-                    
-                    const callerCandidates = await getDocs(collection(roomRef, 'callerCandidates'));
-                    callerCandidates.forEach((docSnap) => {
-                        deleteDoc(docSnap.ref);
-                    });
-                    
-                    const calleeCandidates = await getDocs(collection(roomRef, 'calleeCandidates'));
-                    calleeCandidates.forEach((docSnap) => {
-                        deleteDoc(docSnap.ref);
-                    });
-
-                    await deleteDoc(roomRef);
-                }
-            } catch (e) {
-                console.error("Error during room cleanup:", e);
-            }
-        }
-        roomId = null;
-        roomRef = null;
+                const candCol = collection(currentRoomRef, "candidates");
+                const cSnap = await getDocs(candCol);
+                for (const c of cSnap.docs) await deleteDoc(c.ref);
+                const msgCol = collection(currentRoomRef, "messages");
+                const mSnap = await getDocs(msgCol);
+                for (const m of mSnap.docs) await deleteDoc(m.ref);
+                await deleteDoc(currentRoomRef);
+            } catch (e) {}
+        })();
+        roomId = null; roomRef = null;
     }
-    
+    if (peerConnection) { peerConnection.close(); peerConnection = null; }
     remoteStream = null;
+    remoteCandidatesQueue = [];
 }
-
