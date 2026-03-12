@@ -2,7 +2,7 @@ import { auth, db, provider } from './firebase-config.js';
 import { signInWithPopup, onAuthStateChanged, signOut, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { initMedia, findMatch, hangup, setMicGain, sendEffectUpdate, startDirectCall } from './webrtc.js';
-import { sendChatMessage } from './chat.js';
+import { sendChatMessage, setupChat, stopChat } from './chat.js';
 import { 
     searchUserByInstaId, searchUserById, addFriend, removeFriend, 
     listenToFriends, initiateDirectCall, listenForCalls 
@@ -25,8 +25,6 @@ const chatMessages = document.getElementById('chatMessages');
 const remoteStatus = document.getElementById('remoteStatus');
 const partnerSocial = document.getElementById('partnerSocial');
 const onlineCountEl = document.getElementById('onlineCount');
-const callTimerEl = document.getElementById('callTimer');
-const timerValueEl = document.getElementById('timerValue');
 
 // Friends UI Elements
 const friendListBtn = document.getElementById('friendListBtn');
@@ -44,14 +42,12 @@ const micVolumeSlider = document.getElementById('micVolumeSlider');
 const brightnessSlider = document.getElementById('brightnessSlider');
 const mirrorToggleBtn = document.getElementById('mirrorToggleBtn');
 const volumeSlider = document.getElementById('volumeSlider');
-const remoteVolumeBtn = document.getElementById('remoteVolumeBtn');
 
 const googleLoginBtn = document.getElementById('googleLoginBtn');
 const userInfo = document.getElementById('userInfo');
 const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
 
-const totalUsersEl = document.getElementById('totalUsers');
 const onlineUsersEl = document.getElementById('onlineUsers');
 
 // Gender Modal Elements
@@ -81,8 +77,6 @@ let isMicMuted = false;
 let isMirrored = false;
 let currentBrightness = 100;
 let statusTimeout = null;
-let callStartTime = null;
-let callTimerInterval = null;
 
 // Initialization
 async function init() {
@@ -112,7 +106,7 @@ async function init() {
                 userInfo.style.display = 'flex';
                 userName.textContent = user.displayName;
                 userAvatar.src = user.photoURL || 'https://via.placeholder.com/32';
-                myIdDisplay.value = user.uid;
+                if (myIdDisplay) myIdDisplay.value = user.uid;
                 myInfo.name = user.displayName;
                 myInfo.photoUrl = user.photoURL;
             }
@@ -151,6 +145,7 @@ async function init() {
         const now = Date.now();
         snap.forEach(doc => { if (now - (doc.data().lastSeen || 0) < 120000) activeCount++; });
         if (onlineCountEl) onlineCountEl.textContent = activeCount;
+        if (onlineUsersEl) onlineUsersEl.textContent = activeCount;
     });
 
     setInterval(async () => {
@@ -163,7 +158,7 @@ function setupEventListeners() {
         isMicMuted = !isMicMuted;
         setMicGain(isMicMuted ? 0 : 1);
         micToggleBtn.textContent = isMicMuted ? 'mic_off' : 'mic';
-        micVolumeSlider.value = isMicMuted ? 0 : 1;
+        if (micVolumeSlider) micVolumeSlider.value = isMicMuted ? 0 : 1;
     });
     micVolumeSlider?.addEventListener('input', (e) => {
         const vol = parseFloat(e.target.value);
@@ -187,7 +182,7 @@ function setupEventListeners() {
         if (myInfo.gender === 'unspecified') { genderModal.classList.add('active'); return; }
         findMatchBtn.disabled = true; hangupBtn.disabled = false;
         chatMessagesInner.innerHTML = '';
-        addSystemMessage("Searching for a partner...");
+        addSystemMessage("Searching...");
         startAutoMatching();
     });
     hangupBtn.addEventListener('click', () => { stopAutoMatching(); hangup(); callbacks.onDisconnect(); });
@@ -198,7 +193,13 @@ function setupEventListeners() {
     messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
     friendListBtn?.addEventListener('click', toggleFriendList);
     friendSearchBtn?.addEventListener('click', handleFriendSearch);
-    copyIdBtn?.addEventListener('click', () => { myIdDisplay.select(); document.execCommand('copy'); alert("ID Copied!"); });
+    copyIdBtn?.addEventListener('click', () => {
+        if (myIdDisplay) {
+            myIdDisplay.select();
+            document.execCommand('copy');
+            alert("ID Copied!");
+        }
+    });
     genderBtns.forEach(btn => btn.addEventListener('click', () => {
         genderBtns.forEach(b => b.classList.remove('selected')); btn.classList.add('selected');
         selectedGender = btn.getAttribute('data-gender'); confirmGenderBtn.disabled = false;
@@ -217,12 +218,13 @@ function setupEventListeners() {
 
 function toggleFriendList() {
     isShowingFriends = !isShowingFriends;
-    chatMessages.style.display = isShowingFriends ? 'none' : 'block';
-    friendListArea.style.display = isShowingFriends ? 'block' : 'none';
-    chatHeaderTitle.textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
+    if (chatMessages) chatMessages.style.display = isShowingFriends ? 'none' : 'block';
+    if (friendListArea) friendListArea.style.display = isShowingFriends ? 'block' : 'none';
+    if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
 }
 
 function updateFriendListUI(friends) {
+    if (!friendListInner) return;
     friendListInner.innerHTML = '';
     if (friends.length === 0) { friendListInner.innerHTML = '<div class="system-message">No friends yet. Search by ID to add!</div>'; return; }
     friends.forEach(f => {
@@ -249,50 +251,22 @@ async function handleFriendSearch() {
             friendListInner.innerHTML = '';
             const item = document.createElement('div');
             item.className = 'friend-item';
-            item.innerHTML = `
-                <img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar">
-                <div class="friend-info">
-                    <div class="friend-name">${user.name || 'Anonymous'}</div>
-                    <div class="friend-status">Found by ID</div>
-                </div>
-                <button class="btn primary add-btn">Add Friend</button>
-            `;
+            item.innerHTML = `<img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${user.name}</div></div><button class="btn primary add-btn">Add Friend</button>`;
             item.querySelector('.add-btn').onclick = async () => {
                 await addFriend(user);
                 friendSearchInput.value = '';
             };
             friendListInner.appendChild(item);
-        } else alert("User not found. Make sure the ID is correct.");
-    } catch (e) { console.error("Search error:", e); alert("Search failed."); }
-}
-
-function startCallTimer() {
-    stopCallTimer();
-    callStartTime = Date.now();
-    if (callTimerEl) callTimerEl.style.display = 'flex';
-    callTimerInterval = setInterval(updateCallTimer, 1000);
-}
-
-function stopCallTimer() {
-    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
-    if (callTimerEl) callTimerEl.style.display = 'none';
-    if (timerValueEl) timerValueEl.textContent = '00:00';
-}
-
-function updateCallTimer() {
-    if (!callStartTime) return;
-    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
-    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-    const secs = (elapsed % 60).toString().padStart(2, '0');
-    if (timerValueEl) timerValueEl.textContent = `${mins}:${secs}`;
+        } else alert("User not found.");
+    } catch (e) { alert("Search failed."); }
 }
 
 function loadSettingsToUI() {
-    document.getElementById('myGenderDisplay').value = myInfo.gender.toUpperCase();
-    document.getElementById('prefGender').value = myInfo.prefGender;
-    document.getElementById('myInsta').value = myInfo.insta;
-    document.getElementById('myWhatsapp').value = myInfo.whatsapp;
-    document.getElementById('showInfo').checked = myInfo.showInfo;
+    if (document.getElementById('myGenderDisplay')) document.getElementById('myGenderDisplay').value = myInfo.gender.toUpperCase();
+    if (document.getElementById('prefGender')) document.getElementById('prefGender').value = myInfo.prefGender;
+    if (document.getElementById('myInsta')) document.getElementById('myInsta').value = myInfo.insta;
+    if (document.getElementById('myWhatsapp')) document.getElementById('myWhatsapp').value = myInfo.whatsapp;
+    if (document.getElementById('showInfo')) document.getElementById('showInfo').checked = myInfo.showInfo;
     updateLocalSocialIcons();
 }
 
@@ -309,20 +283,23 @@ async function saveSettings() {
 function updateLocalSocialIcons() {
     const instaLink = document.getElementById('myInstaLink');
     const waLink = document.getElementById('myWhatsappLink');
-    if(myInfo.insta) { instaLink.href = `https://instagram.com/${myInfo.insta}`; instaLink.style.display = 'flex'; } else instaLink.style.display = 'none';
-    if(myInfo.whatsapp) { waLink.href = `https://wa.me/${myInfo.whatsapp.replace(/[^\d+]/g, '')}`; waLink.style.display = 'flex'; } else waLink.style.display = 'none';
+    if(myInfo.insta) { if (instaLink) { instaLink.href = `https://instagram.com/${myInfo.insta}`; instaLink.style.display = 'flex'; } } else if (instaLink) instaLink.style.display = 'none';
+    if(myInfo.whatsapp) { if (waLink) { waLink.href = `https://wa.me/${myInfo.whatsapp.replace(/[^\d+]/g, '')}`; waLink.style.display = 'flex'; } } else if (waLink) waLink.style.display = 'none';
 }
 
 let autoMatchInterval = null;
 function setStatus(msg, autoHide = true) {
     if (statusTimeout) clearTimeout(statusTimeout);
-    remoteStatus.textContent = msg; remoteStatus.style.display = 'block';
-    if (autoHide) statusTimeout = setTimeout(() => { remoteStatus.textContent = ''; remoteStatus.style.display = 'none'; }, 3000);
+    if (remoteStatus) {
+        remoteStatus.textContent = msg; remoteStatus.style.display = 'block';
+        if (autoHide) statusTimeout = setTimeout(() => { remoteStatus.textContent = ''; remoteStatus.style.display = 'none'; }, 3000);
+    }
 }
 
 async function startAutoMatching() {
     if (autoMatchInterval) return;
-    document.getElementById('matchingOverlay').style.display = 'flex';
+    const overlay = document.getElementById('matchingOverlay');
+    if (overlay) overlay.style.display = 'flex';
     const attemptMatch = async () => {
         if (isMatched || isConnecting) return;
         isConnecting = true;
@@ -335,14 +312,19 @@ async function startAutoMatching() {
     }, 5000);
 }
 
-function stopAutoMatching() { if (autoMatchInterval) { clearInterval(autoMatchInterval); autoMatchInterval = null; } isConnecting = false; document.getElementById('matchingOverlay').style.display = 'none'; }
+function stopAutoMatching() { 
+    if (autoMatchInterval) { clearInterval(autoMatchInterval); autoMatchInterval = null; } 
+    isConnecting = false; 
+    const overlay = document.getElementById('matchingOverlay');
+    if (overlay) overlay.style.display = 'none'; 
+}
 
 const callbacks = {
     onStatus: (msg) => {
         if (msg.includes("Error") || msg.includes("denied") || msg.includes("failed")) isConnecting = false;
         setStatus(msg, true);
         if (msg === "Connected!") {
-            isMatched = true; isConnecting = false; stopAutoMatching(); startCallTimer();
+            isMatched = true; isConnecting = false; stopAutoMatching();
             const transitionOverlay = document.getElementById('transitionOverlay');
             if (transitionOverlay) { transitionOverlay.style.display = 'flex'; setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); }
             hangupBtn.disabled = false; findMatchBtn.disabled = true; messageInput.disabled = false; sendBtn.disabled = false;
@@ -350,10 +332,11 @@ const callbacks = {
         }
     },
     onDisconnect: () => {
-        isMatched = false; isConnecting = false; stopAutoMatching(); stopCallTimer();
-        remoteVideo.srcObject = null; remoteVideo.style.filter = 'none'; remoteVideo.style.transform = 'none';
+        isMatched = false; isConnecting = false; stopAutoMatching();
+        if (remoteVideo) { remoteVideo.srcObject = null; remoteVideo.style.filter = 'none'; remoteVideo.style.transform = 'none'; }
         setStatus("Disconnected.");
-        document.getElementById('partnerInfo').style.display = 'none'; partnerSocial.style.display = 'none';
+        if (document.getElementById('partnerInfo')) document.getElementById('partnerInfo').style.display = 'none'; 
+        if (partnerSocial) partnerSocial.style.display = 'none';
         hangupBtn.disabled = true; findMatchBtn.disabled = false; messageInput.disabled = true; sendBtn.disabled = true;
         addSystemMessage("Disconnected."); hangup();
     },
@@ -363,24 +346,30 @@ const callbacks = {
         const pInstaId = document.getElementById('partnerInstaIdTop');
         if (insta || wa) {
             if (pInfo) { pInfo.style.display = 'block'; if (pInstaId) pInstaId.textContent = insta || 'Stranger'; }
-            partnerSocial.style.display = 'flex';
-            const instLink = document.getElementById('partnerInstaLink');
-            const waLink = document.getElementById('partnerWhatsappLink');
-            if (instLink) { instLink.href = `https://instagram.com/${insta}`; instLink.style.display = insta ? 'flex' : 'none'; }
-            if (waLink) { waLink.href = `https://wa.me/${wa.replace(/[^\d+]/g, '')}`; waLink.style.display = wa ? 'flex' : 'none'; }
+            if (partnerSocial) {
+                partnerSocial.style.display = 'flex';
+                const instLink = document.getElementById('partnerInstaLink');
+                const waLink = document.getElementById('partnerWhatsappLink');
+                if (instLink) { instLink.href = `https://instagram.com/${insta}`; instLink.style.display = insta ? 'flex' : 'none'; }
+                if (waLink) { waLink.href = `https://wa.me/${wa.replace(/[^\d+]/g, '')}`; waLink.style.display = wa ? 'flex' : 'none'; }
+            }
         }
     },
     onPartnerEffect: (data) => {
-        if (data.mirror !== undefined) remoteVideo.style.transform = data.mirror ? 'scaleX(-1)' : 'none';
-        if (data.brightness !== undefined) remoteVideo.style.filter = `brightness(${data.brightness}%)`;
+        if (remoteVideo) {
+            if (data.mirror !== undefined) remoteVideo.style.transform = data.mirror ? 'scaleX(-1)' : 'none';
+            if (data.brightness !== undefined) remoteVideo.style.filter = `brightness(${data.brightness}%)`;
+        }
     }
 };
 
 function addSystemMessage(text) {
+    if (!chatMessagesInner) return;
     const div = document.createElement('div'); div.className = 'system-message'; div.textContent = text;
     chatMessagesInner.appendChild(div); chatMessagesInner.scrollTop = chatMessagesInner.scrollHeight;
 }
 function addChatMessage(text, isMe) {
+    if (!chatMessagesInner) return;
     const div = document.createElement('div'); div.className = `message ${isMe ? 'me' : 'them'}`; div.textContent = text;
     chatMessagesInner.appendChild(div); chatMessagesInner.scrollTop = chatMessagesInner.scrollHeight;
 }
@@ -388,9 +377,11 @@ async function handleSend() { const text = messageInput.value.trim(); if (!text 
 
 // Draggable Logic
 let isDragging = false, currentX = 0, currentY = 0, initialX, initialY, xOffset = 0, yOffset = 0;
-localVideoContainer.addEventListener("mousedown", dragStart); localVideoContainer.addEventListener("touchstart", dragStart, {passive: false});
-document.addEventListener("mouseup", dragEnd); document.addEventListener("touchend", dragEnd);
-document.addEventListener("mousemove", drag); document.addEventListener("touchmove", drag, {passive: false});
+if (localVideoContainer) {
+    localVideoContainer.addEventListener("mousedown", dragStart); localVideoContainer.addEventListener("touchstart", dragStart, {passive: false});
+    document.addEventListener("mouseup", dragEnd); document.addEventListener("touchend", dragEnd);
+    document.addEventListener("mousemove", drag); document.addEventListener("touchmove", drag, {passive: false});
+}
 function dragStart(e) {
     const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     const clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
