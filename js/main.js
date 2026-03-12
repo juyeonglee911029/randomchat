@@ -24,6 +24,9 @@ const chatMessagesInner = document.getElementById('chatMessagesInner');
 const chatMessages = document.getElementById('chatMessages');
 const remoteStatus = document.getElementById('remoteStatus');
 const partnerSocial = document.getElementById('partnerSocial');
+const onlineCountEl = document.getElementById('onlineCount');
+const callTimerEl = document.getElementById('callTimer');
+const timerValueEl = document.getElementById('timerValue');
 
 // Friends UI Elements
 const friendListBtn = document.getElementById('friendListBtn');
@@ -78,11 +81,25 @@ let isMicMuted = false;
 let isMirrored = false;
 let currentBrightness = 100;
 let statusTimeout = null;
+let callStartTime = null;
+let callTimerInterval = null;
 
 // Initialization
 async function init() {
     await initMedia(localVideo);
     setupEventListeners();
+
+    // ESC key listener
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (isConnecting || autoMatchInterval) {
+                stopAutoMatching();
+                hangup();
+                callbacks.onDisconnect();
+                addSystemMessage("Matching cancelled.");
+            }
+        }
+    });
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -133,7 +150,7 @@ async function init() {
         let activeCount = 0;
         const now = Date.now();
         snap.forEach(doc => { if (now - (doc.data().lastSeen || 0) < 120000) activeCount++; });
-        if (onlineUsersEl) onlineUsersEl.textContent = activeCount;
+        if (onlineCountEl) onlineCountEl.textContent = activeCount;
     });
 
     setInterval(async () => {
@@ -170,7 +187,7 @@ function setupEventListeners() {
         if (myInfo.gender === 'unspecified') { genderModal.classList.add('active'); return; }
         findMatchBtn.disabled = true; hangupBtn.disabled = false;
         chatMessagesInner.innerHTML = '';
-        addSystemMessage("Searching...");
+        addSystemMessage("Searching for a partner...");
         startAutoMatching();
     });
     hangupBtn.addEventListener('click', () => { stopAutoMatching(); hangup(); callbacks.onDisconnect(); });
@@ -225,15 +242,49 @@ function updateFriendListUI(friends) {
 
 async function handleFriendSearch() {
     const id = friendSearchInput.value.trim(); if (!id) return;
-    let user = await searchUserByInstaId(id) || await searchUserById(id);
-    if (user) {
-        friendListInner.innerHTML = '';
-        const item = document.createElement('div');
-        item.className = 'friend-item';
-        item.innerHTML = `<img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${user.name}</div></div><button class="btn primary add-btn">Add Friend</button>`;
-        item.querySelector('.add-btn').onclick = () => addFriend(user);
-        friendListInner.appendChild(item);
-    } else alert("User not found.");
+    addSystemMessage(`Searching for user: ${id}...`);
+    try {
+        let user = await searchUserByInstaId(id) || await searchUserById(id);
+        if (user) {
+            friendListInner.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            item.innerHTML = `
+                <img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar">
+                <div class="friend-info">
+                    <div class="friend-name">${user.name || 'Anonymous'}</div>
+                    <div class="friend-status">Found by ID</div>
+                </div>
+                <button class="btn primary add-btn">Add Friend</button>
+            `;
+            item.querySelector('.add-btn').onclick = async () => {
+                await addFriend(user);
+                friendSearchInput.value = '';
+            };
+            friendListInner.appendChild(item);
+        } else alert("User not found. Make sure the ID is correct.");
+    } catch (e) { console.error("Search error:", e); alert("Search failed."); }
+}
+
+function startCallTimer() {
+    stopCallTimer();
+    callStartTime = Date.now();
+    if (callTimerEl) callTimerEl.style.display = 'flex';
+    callTimerInterval = setInterval(updateCallTimer, 1000);
+}
+
+function stopCallTimer() {
+    if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+    if (callTimerEl) callTimerEl.style.display = 'none';
+    if (timerValueEl) timerValueEl.textContent = '00:00';
+}
+
+function updateCallTimer() {
+    if (!callStartTime) return;
+    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const secs = (elapsed % 60).toString().padStart(2, '0');
+    if (timerValueEl) timerValueEl.textContent = `${mins}:${secs}`;
 }
 
 function loadSettingsToUI() {
@@ -275,13 +326,7 @@ async function startAutoMatching() {
     const attemptMatch = async () => {
         if (isMatched || isConnecting) return;
         isConnecting = true;
-        try { 
-            await findMatch(remoteVideo, myInfo, callbacks); 
-        } catch (e) { 
-            console.error("Match attempt failed:", e);
-            isConnecting = false; 
-            // Don't show error to user, just let the interval retry silently
-        }
+        try { await findMatch(remoteVideo, myInfo, callbacks); } catch (e) { isConnecting = false; }
     };
     await attemptMatch();
     autoMatchInterval = setInterval(async () => {
@@ -294,30 +339,18 @@ function stopAutoMatching() { if (autoMatchInterval) { clearInterval(autoMatchIn
 
 const callbacks = {
     onStatus: (msg) => {
-        console.log("Status Update:", msg);
-        
-        // Reset connection flag if we hit a failure
-        if (msg.includes("Error") || msg.includes("denied") || msg.includes("failed")) {
-            isConnecting = false;
-        }
-
-        setStatus(msg, msg !== "Connected!");
-        
+        if (msg.includes("Error") || msg.includes("denied") || msg.includes("failed")) isConnecting = false;
+        setStatus(msg, true);
         if (msg === "Connected!") {
-            isMatched = true; 
-            isConnecting = false; 
-            stopAutoMatching();
+            isMatched = true; isConnecting = false; stopAutoMatching(); startCallTimer();
             const transitionOverlay = document.getElementById('transitionOverlay');
-            if (transitionOverlay) { 
-                transitionOverlay.style.display = 'flex'; 
-                setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); 
-            }
+            if (transitionOverlay) { transitionOverlay.style.display = 'flex'; setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); }
             hangupBtn.disabled = false; findMatchBtn.disabled = true; messageInput.disabled = false; sendBtn.disabled = false;
             addSystemMessage("Connected."); sendEffectUpdate({ mirror: isMirrored, brightness: currentBrightness });
         }
     },
     onDisconnect: () => {
-        isMatched = false; isConnecting = false; stopAutoMatching();
+        isMatched = false; isConnecting = false; stopAutoMatching(); stopCallTimer();
         remoteVideo.srcObject = null; remoteVideo.style.filter = 'none'; remoteVideo.style.transform = 'none';
         setStatus("Disconnected.");
         document.getElementById('partnerInfo').style.display = 'none'; partnerSocial.style.display = 'none';
