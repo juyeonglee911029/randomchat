@@ -402,8 +402,11 @@ function addChatMessage(text, isMe) {
     chatMessagesInner.appendChild(div);
 
     // Keep only the last 10 messages
-    while (chatMessagesInner.children.length > 10) {
-        chatMessagesInner.removeChild(chatMessagesInner.firstChild);
+    const messages = chatMessagesInner.querySelectorAll('.message, .system-message');
+    if (messages.length > 10) {
+        for (let i = 0; i < messages.length - 10; i++) {
+            messages[i].remove();
+        }
     }
 
     chatMessagesInner.parentElement.scrollTop = chatMessagesInner.parentElement.scrollHeight;
@@ -426,7 +429,11 @@ if (localVideoContainer) {
 function dragStart(e) {
     const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     const clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
-    initialX = clientX - xOffset; initialY = clientY - yOffset;
+    
+    // Reset offsets if container size changed (e.g. expanded)
+    initialX = clientX - xOffset; 
+    initialY = clientY - yOffset;
+    
     if (localVideoContainer.contains(e.target)) isDragging = true;
 }
 function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
@@ -435,16 +442,36 @@ function drag(e) {
         e.preventDefault();
         const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
-        let targetX = clientX - initialX, targetY = clientY - initialY;
+        
+        let targetX = clientX - initialX;
+        let targetY = clientY - initialY;
+
         const container = document.querySelector('.video-container');
         if (container && localVideoContainer) {
-            const containerRect = container.getBoundingClientRect(), wrapperRect = localVideoContainer.getBoundingClientRect();
-            const initialLeft = containerRect.right - wrapperRect.width - 20, initialTop = containerRect.bottom - wrapperRect.height - 20;
-            const minX = containerRect.left - initialLeft, maxX = containerRect.right - (initialLeft + wrapperRect.width);
-            const minY = containerRect.top - initialTop, maxY = containerRect.bottom - (initialTop + wrapperRect.height);
-            targetX = Math.min(Math.max(targetX, minX), maxX); targetY = Math.min(Math.max(targetY, minY), maxY);
+            const containerRect = container.getBoundingClientRect();
+            const wrapperRect = localVideoContainer.getBoundingClientRect();
+            
+            // Calculate boundaries in terms of transform offsets
+            // We need to know where the element IS without the transform to bound the transform.
+            // But a simpler way is to check the projected bounding box.
+            
+            const nextRect = {
+                left: wrapperRect.left + (targetX - xOffset),
+                right: wrapperRect.right + (targetX - xOffset),
+                top: wrapperRect.top + (targetY - yOffset),
+                bottom: wrapperRect.bottom + (targetY - yOffset)
+            };
+
+            if (nextRect.left < containerRect.left) targetX = xOffset + (containerRect.left - wrapperRect.left);
+            if (nextRect.right > containerRect.right) targetX = xOffset + (containerRect.right - wrapperRect.right);
+            if (nextRect.top < containerRect.top) targetY = yOffset + (containerRect.top - wrapperRect.top);
+            if (nextRect.bottom > containerRect.bottom) targetY = yOffset + (containerRect.bottom - wrapperRect.bottom);
         }
-        currentX = targetX; currentY = targetY; xOffset = currentX; yOffset = currentY;
+
+        currentX = targetX;
+        currentY = targetY;
+        xOffset = currentX;
+        yOffset = currentY;
         localVideoContainer.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
     }
 }

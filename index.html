@@ -182,6 +182,17 @@
                 <div class="chat-header">
                     <h2 id="chatHeaderTitle">CHAT</h2>
                 </div>
+                
+                <div class="chat-input-area">
+                    <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+                    <button id="sendBtn" class="btn primary" disabled>
+                        <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;">
+                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+
                 <div id="chatMessages" class="chat-messages">
                     <div class="chat-messages-inner" id="chatMessagesInner">
                         <div class="system-message">Welcome to YELLOWCHAT. Click "Find Stranger" to start.</div>
@@ -199,35 +210,10 @@
                         <!-- Friends will be listed here -->
                     </div>
                 </div>
-                <div class="chat-input-area">
-                    <input type="text" id="messageInput" placeholder="Type a message..." disabled>
-                    <button id="sendBtn" class="btn primary" disabled>
-                        <svg class="send-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px;">
-                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                </div>
             </aside>
-        </main>
+            </main>
 
-        <!-- SEO/AdSense Content Section (Visible to crawlers) -->
-        <section class="seo-content" style="padding: 40px; background: #1a1a1a; color: #888; font-size: 14px; line-height: 1.6; border-top: 1px solid #333;">
-            <div style="max-width: 1200px; margin: 0 auto;">
-                <h2 style="color: var(--primary); margin-bottom: 15px;">Welcome to YELLOWCHAT - The Ultimate Random Video Chat Platform</h2>
-                <p>YELLOWCHAT provides a secure and high-performance video communication service for users worldwide. Our platform utilizes WebRTC technology to ensure low-latency, high-definition video calls directly between users. Whether you are looking to make new friends, practice a foreign language, or simply have a spontaneous conversation, YELLOWCHAT is the perfect place to connect with strangers in a safe environment.</p>
-                <h3 style="color: #ccc; margin-top: 20px;">Key Features:</h3>
-                <ul style="margin-left: 20px;">
-                    <li><strong>Instant Matching:</strong> Connect with global users in seconds using our advanced matching algorithm.</li>
-                    <li><strong>Privacy First:</strong> We prioritize user safety. Your location and sensitive data are never stored without consent.</li>
-                    <li><strong>Customizable Experience:</strong> Adjust brightness, mic gain, and video mirroring to suit your preferences.</li>
-                </ul>
-                <p style="margin-top: 20px;">Our mission is to foster meaningful global connections through the power of real-time video chat. We strictly follow Google AdSense policies and provide a valuable, original service to our growing community. Start your journey today on YELLOWCHAT!</p>
-            </div>
-        </section>
-
-        <!-- Matching Animation Overlay -->
-        <div id="matchingOverlay" class="matching-overlay" style="display: none;">
+            <!-- Matching Animation Overlay -->        <div id="matchingOverlay" class="matching-overlay" style="display: none;">
             <div class="matching-content">
                 <div class="loader-wrapper">
                     <div class="loader-pulse"></div>

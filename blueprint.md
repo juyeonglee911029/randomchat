@@ -13,13 +13,12 @@ YELLOWCHAT is a real-time random video chat application built with framework-les
 - **Animations:** Floating logo, matching overlay, and transition effects.
 - **Premium Effects:** Subtle noise texture, multi-layered drop shadows, and glow effects on interactive elements.
 
-## Recent Changes (March 11, 2026)
-- **Robust WebRTC Architecture (Omegle-style):**
-    - **Atomic Joining:** Implemented Firestore Transactions (`runTransaction`) to ensure only one user can join a waiting room, eliminating race conditions where three people end up in one room.
-    - **Signaling Subcollections:** Moved ICE candidates to a dedicated `candidates` subcollection. This ensures faster updates and prevents the main room document from hitting size limits.
-    - **Safe ICE Queuing:** Added a robust queuing mechanism for remote ICE candidates that arrive before the WebRTC handshake is ready to receive them.
-    - **Synchronized Cleanup:** Improved `hangup()` to thoroughly delete rooms and all related signaling data in the background.
-    - **UI Stability:** Refined the matching loop to prevent it from interrupting active connection attempts, ensuring a smoother "Connecting..." phase.
+## Recent Changes (March 13, 2026)
+- **Layout & UI Overhaul:**
+    - **SEO Content Removal:** Cleaned up the landing page by removing the `seo-content` section and footer elements.
+    - **Mobile Top Bar Optimization:** Refined the header for mobile screens to ensure "Find Stranger", "Stop", "Friends", and "Settings" buttons all fit on a single row without wrapping. Uniformly reduced button sizes for a cleaner look.
+    - **Chat UI Refinement:** Moved the chat input field above the message area. Simplified the chat UI and enforced a strict 10-message visible limit for improved clarity and performance.
+    - **Local Video Layout Fix:** Resolved a bug where the local video preview was becoming "twisted" or distorted. Refined the boundary logic for the draggable local video container to ensure it stays correctly within the main rectangular border.
 
 ## Implementation Steps
 1.  Identify `#userInfo` in CSS and apply `display: none !important` within the 768px media query.
