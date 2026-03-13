@@ -218,26 +218,69 @@ function setupEventListeners() {
 
 function toggleFriendList() {
     isShowingFriends = !isShowingFriends;
+    console.log("Showing friends:", isShowingFriends);
     if (chatMessages) chatMessages.style.display = isShowingFriends ? 'none' : 'block';
-    if (friendListArea) friendListArea.style.display = isShowingFriends ? 'block' : 'none';
+    if (friendListArea) {
+        friendListArea.style.display = isShowingFriends ? 'flex' : 'none';
+        // Force flex direction as CSS might expect it
+        friendListArea.style.flexDirection = 'column';
+    }
     if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
+    
+    if (isShowingFriends && unsubFriends === null) {
+        unsubFriends = listenToFriends(updateFriendListUI);
+    }
 }
 
 function updateFriendListUI(friends) {
     if (!friendListInner) return;
     friendListInner.innerHTML = '';
-    if (friends.length === 0) { friendListInner.innerHTML = '<div class="system-message">No friends yet. Search by ID to add!</div>'; return; }
+    console.log("Updating friend list UI with", friends.length, "friends");
+    if (friends.length === 0) { 
+        friendListInner.innerHTML = `
+            <div class="system-message" style="text-align: center; padding: 20px;">
+                <i class="material-icons" style="font-size: 48px; color: var(--text-muted); margin-bottom: 10px;">person_add_disabled</i>
+                <p>No friends yet.</p>
+                <p style="font-size: 0.8rem;">Search by Instagram ID or User ID to add friends!</p>
+            </div>`; 
+        return; 
+    }
     friends.forEach(f => {
         const item = document.createElement('div');
         item.className = 'friend-item';
         const online = f.online && (Date.now() - (f.lastSeen || 0) < 120000);
-        item.innerHTML = `<img src="${f.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${f.name}</div><div class="friend-status">${online ? 'Online' : 'Offline'}</div></div><div class="friend-actions"><button class="friend-action-btn call-direct" title="Call"><i class="material-icons">videocam</i></button><button class="friend-action-btn delete" title="Remove"><i class="material-icons">person_remove</i></button></div>`;
+        item.innerHTML = `
+            <img src="${f.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar">
+            <div class="friend-info">
+                <div class="friend-name">${f.name}</div>
+                <div class="friend-status ${online ? 'online' : ''}">${online ? 'Online' : 'Offline'}</div>
+            </div>
+            <div class="friend-actions">
+                <button class="friend-action-btn call-direct" title="Call">
+                    <i class="material-icons">videocam</i>
+                </button>
+                <button class="friend-action-btn delete" title="Remove">
+                    <i class="material-icons">person_remove</i>
+                </button>
+            </div>`;
+        
         item.querySelector('.call-direct').onclick = async () => {
+            if (isMatched || isConnecting) {
+                alert("Please end your current call first.");
+                return;
+            }
             const pw = prompt("Password (Optional):");
             const rid = await initiateDirectCall(f.id, pw);
-            if (rid) { toggleFriendList(); isConnecting = true; addSystemMessage(`Calling ${f.name}...`); await startDirectCall(remoteVideo, myInfo, callbacks, rid, true); }
+            if (rid) { 
+                toggleFriendList(); 
+                isConnecting = true; 
+                addSystemMessage(`Calling ${f.name}...`); 
+                await startDirectCall(remoteVideo, myInfo, callbacks, rid, true); 
+            }
         };
-        item.querySelector('.delete').onclick = () => { if(confirm("Remove friend?")) removeFriend(f.id); };
+        item.querySelector('.delete').onclick = () => { 
+            if(confirm(`Remove ${f.name} from friends?`)) removeFriend(f.id); 
+        };
         friendListInner.appendChild(item);
     });
 }
@@ -251,14 +294,26 @@ async function handleFriendSearch() {
             friendListInner.innerHTML = '';
             const item = document.createElement('div');
             item.className = 'friend-item';
-            item.innerHTML = `<img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${user.name}</div></div><button class="btn primary add-btn">Add Friend</button>`;
+            item.innerHTML = `
+                <img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar">
+                <div class="friend-info">
+                    <div class="friend-name">${user.name}</div>
+                    <div class="friend-status">User Found</div>
+                </div>
+                <button class="btn primary add-btn" style="padding: 5px 15px; font-size: 0.8rem;">Add</button>`;
             item.querySelector('.add-btn').onclick = async () => {
                 await addFriend(user);
                 friendSearchInput.value = '';
+                // The listener will automatically update the UI
             };
             friendListInner.appendChild(item);
-        } else alert("User not found.");
-    } catch (e) { alert("Search failed."); }
+        } else {
+            alert("User not found. Please check the ID.");
+        }
+    } catch (e) { 
+        console.error("Search failed:", e);
+        alert("Search failed."); 
+    }
 }
 
 function loadSettingsToUI() {
