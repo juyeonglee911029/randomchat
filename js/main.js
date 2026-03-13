@@ -218,20 +218,41 @@ function setupEventListeners() {
 
 function toggleFriendList() {
     isShowingFriends = !isShowingFriends;
+    const chatInputArea = document.querySelector('.chat-input-area');
     if (chatMessages) chatMessages.style.display = isShowingFriends ? 'none' : 'block';
-    if (friendListArea) friendListArea.style.display = isShowingFriends ? 'block' : 'none';
+    if (chatInputArea) chatInputArea.style.display = isShowingFriends ? 'none' : 'flex';
+    if (friendListArea) friendListArea.style.display = isShowingFriends ? 'flex' : 'none';
     if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
+    
+    if (isShowingFriends && unsubFriends === null) {
+        unsubFriends = listenToFriends(updateFriendListUI);
+    }
 }
 
 function updateFriendListUI(friends) {
     if (!friendListInner) return;
     friendListInner.innerHTML = '';
-    if (friends.length === 0) { friendListInner.innerHTML = '<div class="system-message">No friends yet. Search by ID to add!</div>'; return; }
+    if (friends.length === 0) { 
+        friendListInner.innerHTML = '<div class="system-message" style="padding:20px;">No friends found. Search by ID to add!</div>'; 
+        return; 
+    }
     friends.forEach(f => {
         const item = document.createElement('div');
         item.className = 'friend-item';
-        const online = f.online && (Date.now() - (f.lastSeen || 0) < 120000);
-        item.innerHTML = `<img src="${f.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${f.name}</div><div class="friend-status">${online ? 'Online' : 'Offline'}</div></div><div class="friend-actions"><button class="friend-action-btn call-direct" title="Call"><i class="material-icons">videocam</i></button><button class="friend-action-btn delete" title="Remove"><i class="material-icons">person_remove</i></button></div>`;
+        const online = f.online && (Date.now() - (f.lastSeen || 0) < 300000);
+        const photo = f.photoURL || f.photoUrl || 'https://via.placeholder.com/40';
+        item.innerHTML = `
+            <img src="${photo}" class="friend-avatar">
+            <div class="friend-info">
+                <div class="friend-name">${f.name}</div>
+                <div class="friend-status">${online ? 'Online' : 'Offline'}</div>
+            </div>
+            <div class="friend-actions">
+                <button class="friend-action-btn chat-direct" title="Chat"><i class="material-icons" style="font-size:18px;">chat</i></button>
+                <button class="friend-action-btn call-direct" title="Call"><i class="material-icons" style="font-size:18px;">videocam</i></button>
+                <button class="friend-action-btn delete" title="Remove"><i class="material-icons" style="font-size:18px;">person_remove</i></button>
+            </div>`;
+        item.querySelector('.chat-direct').onclick = () => toggleFriendList();
         item.querySelector('.call-direct').onclick = async () => {
             const pw = prompt("Password (Optional):");
             const rid = await initiateDirectCall(f.id, pw);
@@ -251,7 +272,8 @@ async function handleFriendSearch() {
             friendListInner.innerHTML = '';
             const item = document.createElement('div');
             item.className = 'friend-item';
-            item.innerHTML = `<img src="${user.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${user.name}</div></div><button class="btn primary add-btn">Add Friend</button>`;
+            const photo = user.photoURL || user.photoUrl || 'https://via.placeholder.com/40';
+            item.innerHTML = `<img src="${photo}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${user.name}</div><div class="friend-status">User Found</div></div><button class="btn primary add-btn" style="padding: 5px 10px; font-size: 0.8rem;">Add</button>`;
             item.querySelector('.add-btn').onclick = async () => {
                 await addFriend(user);
                 friendSearchInput.value = '';
@@ -370,14 +392,33 @@ function addSystemMessage(text) {
 }
 function addChatMessage(text, isMe) {
     if (!chatMessagesInner) return;
-    const div = document.createElement('div'); div.className = `message ${isMe ? 'me' : 'them'}`; div.textContent = text;
-    chatMessagesInner.appendChild(div); chatMessagesInner.scrollTop = chatMessagesInner.scrollHeight;
+    const div = document.createElement('div');
+    div.className = `message ${isMe ? 'me' : 'them'}`;
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.innerHTML = `
+        <span class="message-text">${text}</span>
+        <span class="message-time" style="font-size: 0.65rem; opacity: 0.7; margin-left: 8px; align-self: flex-end; display: inline-block;">${time}</span>
+    `;
+    chatMessagesInner.appendChild(div);
+
+    // Keep only the last 10 messages
+    while (chatMessagesInner.children.length > 10) {
+        chatMessagesInner.removeChild(chatMessagesInner.firstChild);
+    }
+
+    chatMessagesInner.parentElement.scrollTop = chatMessagesInner.parentElement.scrollHeight;
 }
+
 async function handleSend() { const text = messageInput.value.trim(); if (!text || !isMatched) return; messageInput.value = ''; await sendChatMessage(text); }
 
 // Draggable Logic
 let isDragging = false, currentX = 0, currentY = 0, initialX, initialY, xOffset = 0, yOffset = 0;
 if (localVideoContainer) {
+    localVideoContainer.addEventListener("click", () => {
+        if (window.innerWidth <= 768) {
+            localVideoContainer.classList.toggle('expanded');
+        }
+    });
     localVideoContainer.addEventListener("mousedown", dragStart); localVideoContainer.addEventListener("touchstart", dragStart, {passive: false});
     document.addEventListener("mouseup", dragEnd); document.addEventListener("touchend", dragEnd);
     document.addEventListener("mousemove", drag); document.addEventListener("touchmove", drag, {passive: false});
