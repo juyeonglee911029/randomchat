@@ -105,17 +105,23 @@ export function listenToFriends(callback) {
     if (!auth.currentUser) return () => {};
     const friendsRef = collection(db, 'users', auth.currentUser.uid, 'friends');
     return onSnapshot(friendsRef, async (snapshot) => {
-        const friends = [];
-        for (const fDoc of snapshot.docs) {
+        const friendPromises = snapshot.docs.map(async (fDoc) => {
             const fData = fDoc.data();
-            // Get latest online status
             const uSnap = await getDoc(doc(db, 'users', fDoc.id));
             if (uSnap.exists()) {
-                friends.push({ ...fData, ...uSnap.data(), id: fDoc.id });
+                const uData = uSnap.data();
+                return { 
+                    ...fData, 
+                    ...uData, 
+                    id: fDoc.id,
+                    name: uData.name || fData.name || 'Anonymous',
+                    photoURL: uData.photoURL || uData.photoUrl || fData.photoURL || ''
+                };
             } else {
-                friends.push({ ...fData, id: fDoc.id });
+                return { ...fData, id: fDoc.id };
             }
-        }
+        });
+        const friends = await Promise.all(friendPromises);
         callback(friends);
     });
 }

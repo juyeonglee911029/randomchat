@@ -219,19 +219,48 @@ function setupEventListeners() {
 function toggleFriendList() {
     isShowingFriends = !isShowingFriends;
     if (chatMessages) chatMessages.style.display = isShowingFriends ? 'none' : 'block';
-    if (friendListArea) friendListArea.style.display = isShowingFriends ? 'block' : 'none';
+    if (friendListArea) {
+        friendListArea.style.display = isShowingFriends ? 'flex' : 'none';
+        friendListArea.style.flexDirection = 'column';
+    }
     if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
+    
+    if (isShowingFriends && unsubFriends === null) {
+        unsubFriends = listenToFriends(updateFriendListUI);
+    }
 }
 
 function updateFriendListUI(friends) {
     if (!friendListInner) return;
     friendListInner.innerHTML = '';
-    if (friends.length === 0) { friendListInner.innerHTML = '<div class="system-message">No friends yet. Search by ID to add!</div>'; return; }
+    if (friends.length === 0) { 
+        friendListInner.innerHTML = '<div class="system-message">No friends yet. Search by ID to add!</div>'; 
+        return; 
+    }
     friends.forEach(f => {
         const item = document.createElement('div');
         item.className = 'friend-item';
         const online = f.online && (Date.now() - (f.lastSeen || 0) < 120000);
-        item.innerHTML = `<img src="${f.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${f.name}</div><div class="friend-status">${online ? 'Online' : 'Offline'}</div></div><div class="friend-actions"><button class="friend-action-btn call-direct" title="Call"><i class="material-icons">videocam</i></button><button class="friend-action-btn delete" title="Remove"><i class="material-icons">person_remove</i></button></div>`;
+        const photo = f.photoURL || f.photoUrl || 'https://via.placeholder.com/40';
+        item.innerHTML = `
+            <img src="${photo}" class="friend-avatar">
+            <div class="friend-info">
+                <div class="friend-name">${f.name}</div>
+                <div class="friend-status">${online ? 'Online' : 'Offline'}</div>
+            </div>
+            <div class="friend-actions">
+                <button class="friend-action-btn chat-direct" title="Chat">
+                    <i class="material-icons">chat</i>
+                </button>
+                <button class="friend-action-btn call-direct" title="Call">
+                    <i class="material-icons">videocam</i>
+                </button>
+                <button class="friend-action-btn delete" title="Remove">
+                    <i class="material-icons">person_remove</i>
+                </button>
+            </div>`;
+        
+        item.querySelector('.chat-direct').onclick = () => toggleFriendList();
         item.querySelector('.call-direct').onclick = async () => {
             const pw = prompt("Password (Optional):");
             const rid = await initiateDirectCall(f.id, pw);
