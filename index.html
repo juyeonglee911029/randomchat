@@ -43,6 +43,9 @@
                         <button id="friendListBtn" class="btn secondary" title="Friends">
                             <i class="material-icons">people</i>
                         </button>
+                        <button id="blogBtn" class="btn secondary" title="Blog">
+                            <i class="material-icons">article</i>
+                        </button>
                         <button id="settingsBtn" class="btn secondary">
                             <i class="material-icons">settings</i>
                         </button>
@@ -254,6 +257,31 @@
             </div>
         </div>
 
+        <!-- Payment / Subscription Modal -->
+        <div id="paymentModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" id="closePaymentModal">&times;</span>
+                <h2 style="color: var(--primary);">PREMIUM UPGRADE</h2>
+                <div class="modal-body">
+                    <p style="text-align: center; margin-bottom: 20px;">To use <strong>Gender Filtering</strong>, you need a Premium Subscription.</p>
+                    <div style="background: rgba(255, 204, 0, 0.1); padding: 15px; border-radius: 10px; border-left: 4px solid var(--primary); margin-bottom: 20px;">
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin-bottom: 8px;"><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Match by Gender (Male/Female)</li>
+                            <li style="margin-bottom: 8px;"><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Ad-free Experience</li>
+                            <li style="margin-bottom: 8px;"><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Premium Badge on Profile</li>
+                            <li><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Priority Matching</li>
+                        </ul>
+                    </div>
+                    <div style="background: #222; padding: 20px; border-radius: 15px; border: 1px solid #444; text-align: center;">
+                        <h3 style="margin-bottom: 10px;">Monthly Pass</h3>
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 20px;">$9.99<span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal;">/month</span></div>
+                        <button id="checkoutBtn" class="btn primary" style="width: 100%; justify-content: center;">Subscribe Now</button>
+                    </div>
+                    <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 15px;">Secure payment via Credit Card / PayPal</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Settings Modal (Hidden by default) -->
         <div id="settingsModal" class="modal">
             <div class="modal-content">
@@ -262,9 +290,9 @@
                 <div class="form-group">
                     <label>Match Preference (Gender)</label>
                     <select id="prefGender">
-                        <option value="any">Any</option>
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
+                        <option value="any">Everyone</option>
+                        <option value="male">Male Only (Premium)</option>
+                        <option value="female">Female Only (Premium)</option>
                     </select>
                 </div>
                 <div class="form-group">

@@ -4,9 +4,12 @@ import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, l
 import { initMedia, findMatch, hangup, setMicGain, sendEffectUpdate, startDirectCall } from './webrtc.js';
 import { sendChatMessage, setupChat, stopChat } from './chat.js';
 import { 
-    searchUserByInstaId, searchUserById, addFriend, removeFriend, 
-    listenToFriends, initiateDirectCall, listenForCalls 
+    searchUserByInstaId, searchUserById, sendFriendRequest, removeFriend, 
+    listenToFriends, initiateDirectCall, listenForCalls,
+    listenToFriendRequests, acceptFriendRequest, declineFriendRequest
 } from './friends.js';
+import { adOptimizer } from './ads.js';
+import { translations, getLanguage, updateMetaTags } from './i18n.js';
 
 // DOM Elements
 const localVideo = document.getElementById('localVideo');
@@ -56,6 +59,11 @@ const genderBtns = document.querySelectorAll('.gender-btn');
 const confirmGenderBtn = document.getElementById('confirmGenderBtn');
 let selectedGender = null;
 
+// Premium/Payment Elements
+const paymentModal = document.getElementById('paymentModal');
+const closePaymentModal = document.getElementById('closePaymentModal');
+const checkoutBtn = document.getElementById('checkoutBtn');
+
 // User Preferences
 let myInfo = {
     gender: 'unspecified',
@@ -64,7 +72,8 @@ let myInfo = {
     whatsapp: '',
     name: 'Anonymous',
     photoUrl: '',
-    showInfo: true
+    showInfo: true,
+    isPremium: false
 };
 
 // State
@@ -77,11 +86,18 @@ let isMicMuted = false;
 let isMirrored = false;
 let currentBrightness = 100;
 let statusTimeout = null;
+let friendRequests = [];
+let friendsList = [];
+let currentLang = 'en';
 
 // Initialization
 async function init() {
+    currentLang = getLanguage();
+    updateMetaTags(currentLang);
+    
     await initMedia(localVideo);
     setupEventListeners();
+    applyTranslations();
 
     // ESC key listener
     document.addEventListener('keydown', (e) => {
@@ -90,7 +106,7 @@ async function init() {
                 stopAutoMatching();
                 hangup();
                 callbacks.onDisconnect();
-                addSystemMessage("Matching cancelled.");
+                addSystemMessage(translations[currentLang].searching + " Cancelled.");
             }
         }
     });
@@ -125,7 +141,19 @@ async function init() {
             
             loadSettingsToUI();
             if (unsubFriends) unsubFriends();
-            unsubFriends = listenToFriends(updateFriendListUI);
+            unsubFriends = listenToFriends((friends) => {
+                friendsList = friends;
+                updateFriendListUI();
+            });
+            
+            listenToFriendRequests((requests) => {
+                friendRequests = requests;
+                if (requests.length > 0) {
+                    addSystemMessage(`You have ${requests.length} new friend request(s).`);
+                }
+                updateFriendListUI();
+            });
+
             if (unsubCalls) unsubCalls();
             unsubCalls = listenForCalls(async (callData) => {
                 if (isMatched || isConnecting) return;
@@ -151,6 +179,28 @@ async function init() {
     setInterval(async () => {
         if (auth.currentUser) await updateDoc(doc(db, 'users', auth.currentUser.uid), { lastSeen: Date.now(), online: true }).catch(() => {});
     }, 30000);
+}
+
+function applyTranslations() {
+    const t = translations[currentLang];
+    if (findMatchBtn) {
+        const span = findMatchBtn.querySelector('.btn-text');
+        if (span) span.textContent = t.find_stranger;
+    }
+    if (hangupBtn) {
+        const span = hangupBtn.querySelector('.btn-text');
+        if (span) span.textContent = t.stop;
+    }
+    if (friendListBtn) friendListBtn.title = t.friends;
+    if (settingsBtn) settingsBtn.title = t.settings;
+    if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? t.friends.toUpperCase() : 'CHAT';
+    
+    const prefGenderSelect = document.getElementById('prefGender');
+    if (prefGenderSelect) {
+        prefGenderSelect.options[0].textContent = t.everyone;
+        prefGenderSelect.options[1].textContent = t.male_only;
+        prefGenderSelect.options[2].textContent = t.female_only;
+    }
 }
 
 function setupEventListeners() {
@@ -180,18 +230,30 @@ function setupEventListeners() {
     });
     findMatchBtn.addEventListener('click', () => {
         if (myInfo.gender === 'unspecified') { genderModal.classList.add('active'); return; }
+        
+        if (myInfo.prefGender !== 'any' && !myInfo.isPremium) {
+            paymentModal.classList.add('active');
+            return;
+        }
+
         findMatchBtn.disabled = true; hangupBtn.disabled = false;
         chatMessagesInner.innerHTML = '';
-        addSystemMessage("Searching...");
+        addSystemMessage(translations[currentLang].searching);
         startAutoMatching();
     });
     hangupBtn.addEventListener('click', () => { stopAutoMatching(); hangup(); callbacks.onDisconnect(); });
     settingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
-    closeBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
+    
+    const settingsClose = settingsModal.querySelector('.close-btn');
+    settingsClose?.addEventListener('click', () => settingsModal.classList.remove('active'));
+    
     saveSettingsBtn.addEventListener('click', saveSettings);
     sendBtn.addEventListener('click', handleSend);
     messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSend(); });
     friendListBtn?.addEventListener('click', toggleFriendList);
+    document.getElementById('blogBtn')?.addEventListener('click', () => {
+        window.open('/blog', '_blank');
+    });
     friendSearchBtn?.addEventListener('click', handleFriendSearch);
     copyIdBtn?.addEventListener('click', () => {
         if (myIdDisplay) {
@@ -214,6 +276,21 @@ function setupEventListeners() {
     });
     googleLoginBtn.addEventListener('click', () => signInWithPopup(auth, provider).catch(console.error));
     userInfo.addEventListener('click', () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); });
+
+    closePaymentModal?.addEventListener('click', () => paymentModal.classList.remove('active'));
+    checkoutBtn?.addEventListener('click', async () => {
+        if (!auth.currentUser) { alert("Please login first!"); return; }
+        checkoutBtn.disabled = true; checkoutBtn.textContent = 'Processing...';
+        setTimeout(async () => {
+            try {
+                await updateDoc(doc(db, 'users', auth.currentUser.uid), { isPremium: true });
+                myInfo.isPremium = true;
+                alert("Subscription activated! You can now use gender filters.");
+                paymentModal.classList.remove('active');
+            } catch (e) { alert("Payment failed."); }
+            checkoutBtn.disabled = false; checkoutBtn.textContent = translations[currentLang].subscribe_now;
+        }, 2000);
+    });
 }
 
 function toggleFriendList() {
@@ -222,45 +299,80 @@ function toggleFriendList() {
     if (chatMessages) chatMessages.style.display = isShowingFriends ? 'none' : 'block';
     if (chatInputArea) chatInputArea.style.display = isShowingFriends ? 'none' : 'flex';
     if (friendListArea) friendListArea.style.display = isShowingFriends ? 'flex' : 'none';
-    if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
+    if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? translations[currentLang].friends.toUpperCase() : 'CHAT';
     
-    if (isShowingFriends && unsubFriends === null) {
-        unsubFriends = listenToFriends(updateFriendListUI);
-    }
+    if (isShowingFriends) updateFriendListUI();
 }
 
-function updateFriendListUI(friends) {
+function updateFriendListUI() {
     if (!friendListInner) return;
     friendListInner.innerHTML = '';
-    if (friends.length === 0) { 
-        friendListInner.innerHTML = '<div class="system-message" style="padding:20px;">No friends found. Search by ID to add!</div>'; 
-        return; 
+    const t = translations[currentLang];
+
+    if (friendRequests.length > 0) {
+        const reqHeader = document.createElement('div');
+        reqHeader.className = 'system-message';
+        reqHeader.style.padding = '10px';
+        reqHeader.textContent = t.pending_requests;
+        friendListInner.appendChild(reqHeader);
+
+        friendRequests.forEach(req => {
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            const photo = req.fromPhoto || 'https://via.placeholder.com/40';
+            item.innerHTML = `
+                <img src="${photo}" class="friend-avatar">
+                <div class="friend-info">
+                    <div class="friend-name">${req.fromName}</div>
+                    <div class="friend-status">Pending Request</div>
+                </div>
+                <div class="friend-actions">
+                    <button class="friend-action-btn accept" title="Accept" style="color: #4CAF50;"><i class="material-icons">check</i></button>
+                    <button class="friend-action-btn decline" title="Decline" style="color: #f44336;"><i class="material-icons">close</i></button>
+                </div>`;
+            item.querySelector('.accept').onclick = () => acceptFriendRequest(req);
+            item.querySelector('.decline').onclick = () => declineFriendRequest(req.id);
+            friendListInner.appendChild(item);
+        });
     }
-    friends.forEach(f => {
-        const item = document.createElement('div');
-        item.className = 'friend-item';
-        const online = f.online && (Date.now() - (f.lastSeen || 0) < 300000);
-        const photo = f.photoURL || f.photoUrl || 'https://via.placeholder.com/40';
-        item.innerHTML = `
-            <img src="${photo}" class="friend-avatar">
-            <div class="friend-info">
-                <div class="friend-name">${f.name}</div>
-                <div class="friend-status">${online ? 'Online' : 'Offline'}</div>
-            </div>
-            <div class="friend-actions">
-                <button class="friend-action-btn chat-direct" title="Chat"><i class="material-icons" style="font-size:18px;">chat</i></button>
-                <button class="friend-action-btn call-direct" title="Call"><i class="material-icons" style="font-size:18px;">videocam</i></button>
-                <button class="friend-action-btn delete" title="Remove"><i class="material-icons" style="font-size:18px;">person_remove</i></button>
-            </div>`;
-        item.querySelector('.chat-direct').onclick = () => toggleFriendList();
-        item.querySelector('.call-direct').onclick = async () => {
-            const pw = prompt("Password (Optional):");
-            const rid = await initiateDirectCall(f.id, pw);
-            if (rid) { toggleFriendList(); isConnecting = true; addSystemMessage(`Calling ${f.name}...`); await startDirectCall(remoteVideo, myInfo, callbacks, rid, true); }
-        };
-        item.querySelector('.delete').onclick = () => { if(confirm("Remove friend?")) removeFriend(f.id); };
-        friendListInner.appendChild(item);
-    });
+
+    if (friendsList.length > 0) {
+        const friendsHeader = document.createElement('div');
+        friendsHeader.className = 'system-message';
+        friendsHeader.style.padding = '10px';
+        friendsHeader.textContent = t.my_friends;
+        friendListInner.appendChild(friendsHeader);
+
+        friendsList.forEach(f => {
+            const item = document.createElement('div');
+            item.className = 'friend-item';
+            const online = f.online && (Date.now() - (f.lastSeen || 0) < 300000);
+            const photo = f.photoURL || f.photoUrl || 'https://via.placeholder.com/40';
+            item.innerHTML = `
+                <img src="${photo}" class="friend-avatar">
+                <div class="friend-info">
+                    <div class="friend-name">${f.name}</div>
+                    <div class="friend-status">${online ? 'Online' : 'Offline'}</div>
+                </div>
+                <div class="friend-actions">
+                    <button class="friend-action-btn chat-direct" title="Chat"><i class="material-icons" style="font-size:18px;">chat</i></button>
+                    <button class="friend-action-btn call-direct" title="Call"><i class="material-icons" style="font-size:18px;">videocam</i></button>
+                    <button class="friend-action-btn delete" title="Remove"><i class="material-icons" style="font-size:18px;">person_remove</i></button>
+                </div>`;
+            item.querySelector('.chat-direct').onclick = () => toggleFriendList();
+            item.querySelector('.call-direct').onclick = async () => {
+                const pw = prompt("Password (Optional):");
+                const rid = await initiateDirectCall(f.id, pw);
+                if (rid) { toggleFriendList(); isConnecting = true; addSystemMessage(`Calling ${f.name}...`); await startDirectCall(remoteVideo, myInfo, callbacks, rid, true); }
+            };
+            item.querySelector('.delete').onclick = () => { if(confirm("Remove friend?")) removeFriend(f.id); };
+            friendListInner.appendChild(item);
+        });
+    }
+
+    if (friendRequests.length === 0 && friendsList.length === 0) {
+        friendListInner.innerHTML = `<div class="system-message" style="padding:20px;">${t.no_friends}</div>`;
+    }
 }
 
 async function handleFriendSearch() {
@@ -275,8 +387,9 @@ async function handleFriendSearch() {
             const photo = user.photoURL || user.photoUrl || 'https://via.placeholder.com/40';
             item.innerHTML = `<img src="${photo}" class="friend-avatar"><div class="friend-info"><div class="friend-name">${user.name}</div><div class="friend-status">User Found</div></div><button class="btn primary add-btn" style="padding: 5px 10px; font-size: 0.8rem;">Add</button>`;
             item.querySelector('.add-btn').onclick = async () => {
-                await addFriend(user);
+                await sendFriendRequest(user);
                 friendSearchInput.value = '';
+                adOptimizer.showRewardedAd();
             };
             friendListInner.appendChild(item);
         } else alert("User not found.");
@@ -347,20 +460,21 @@ const callbacks = {
         setStatus(msg, true);
         if (msg === "Connected!") {
             isMatched = true; isConnecting = false; stopAutoMatching();
+            adOptimizer.showAdAfterMatch();
             const transitionOverlay = document.getElementById('transitionOverlay');
             if (transitionOverlay) { transitionOverlay.style.display = 'flex'; setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); }
             hangupBtn.disabled = false; findMatchBtn.disabled = true; messageInput.disabled = false; sendBtn.disabled = false;
-            addSystemMessage("Connected."); sendEffectUpdate({ mirror: isMirrored, brightness: currentBrightness });
+            addSystemMessage(translations[currentLang].connected); sendEffectUpdate({ mirror: isMirrored, brightness: currentBrightness });
         }
     },
     onDisconnect: () => {
         isMatched = false; isConnecting = false; stopAutoMatching();
         if (remoteVideo) { remoteVideo.srcObject = null; remoteVideo.style.filter = 'none'; remoteVideo.style.transform = 'none'; }
-        setStatus("Disconnected.");
+        setStatus(translations[currentLang].disconnected);
         if (document.getElementById('partnerInfo')) document.getElementById('partnerInfo').style.display = 'none'; 
         if (partnerSocial) partnerSocial.style.display = 'none';
         hangupBtn.disabled = true; findMatchBtn.disabled = false; messageInput.disabled = true; sendBtn.disabled = true;
-        addSystemMessage("Disconnected."); hangup();
+        addSystemMessage(translations[currentLang].disconnected); hangup();
     },
     onMessage: (msg) => addChatMessage(msg.text, msg.isMe),
     onPartnerSocial: (insta, wa) => {
@@ -401,7 +515,6 @@ function addChatMessage(text, isMe) {
     `;
     chatMessagesInner.appendChild(div);
 
-    // Keep only the last 10 messages
     const messages = chatMessagesInner.querySelectorAll('.message, .system-message');
     if (messages.length > 10) {
         for (let i = 0; i < messages.length - 10; i++) {
@@ -414,7 +527,6 @@ function addChatMessage(text, isMe) {
 
 async function handleSend() { const text = messageInput.value.trim(); if (!text || !isMatched) return; messageInput.value = ''; await sendChatMessage(text); }
 
-// Draggable Logic
 let isDragging = false, currentX = 0, currentY = 0, initialX, initialY, xOffset = 0, yOffset = 0;
 if (localVideoContainer) {
     localVideoContainer.addEventListener("click", () => {
@@ -429,11 +541,8 @@ if (localVideoContainer) {
 function dragStart(e) {
     const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     const clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
-    
-    // Reset offsets if container size changed (e.g. expanded)
     initialX = clientX - xOffset; 
     initialY = clientY - yOffset;
-    
     if (localVideoContainer.contains(e.target)) isDragging = true;
 }
 function dragEnd() { initialX = currentX; initialY = currentY; isDragging = false; }
@@ -442,32 +551,23 @@ function drag(e) {
         e.preventDefault();
         const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
         const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
-        
         let targetX = clientX - initialX;
         let targetY = clientY - initialY;
-
         const container = document.querySelector('.video-container');
         if (container && localVideoContainer) {
             const containerRect = container.getBoundingClientRect();
             const wrapperRect = localVideoContainer.getBoundingClientRect();
-            
-            // Calculate boundaries in terms of transform offsets
-            // We need to know where the element IS without the transform to bound the transform.
-            // But a simpler way is to check the projected bounding box.
-            
             const nextRect = {
                 left: wrapperRect.left + (targetX - xOffset),
                 right: wrapperRect.right + (targetX - xOffset),
                 top: wrapperRect.top + (targetY - yOffset),
                 bottom: wrapperRect.bottom + (targetY - yOffset)
             };
-
             if (nextRect.left < containerRect.left) targetX = xOffset + (containerRect.left - wrapperRect.left);
             if (nextRect.right > containerRect.right) targetX = xOffset + (containerRect.right - wrapperRect.right);
             if (nextRect.top < containerRect.top) targetY = yOffset + (containerRect.top - wrapperRect.top);
             if (nextRect.bottom > containerRect.bottom) targetY = yOffset + (containerRect.bottom - wrapperRect.bottom);
         }
-
         currentX = targetX;
         currentY = targetY;
         xOffset = currentX;
