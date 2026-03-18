@@ -254,10 +254,35 @@ body {
     align-items: center;
 }
 
-/* Online Counter & Timer Display */
+.friends-sidebar {
+    width: 280px;
+    background-color: var(--bg-panel);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 5;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.friends-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+    background-color: rgba(0,0,0,0.2);
+}
+
+.friends-header h3 {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--primary);
+}
+
+/* Online Counter & Timer Display - Repositioned to bottom */
 .stats-overlay {
     position: absolute;
-    top: 50px; /* Below logo */
+    bottom: 80px; /* Above control bar */
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -281,10 +306,18 @@ body {
     border: 1px solid rgba(255, 215, 0, 0.2);
 }
 
+.stat-item i {
+    color: #4CAF50 !important; /* Green for online */
+}
+
 .stat-item.timer {
     color: #fff;
     border-color: rgba(255, 255, 255, 0.2);
     display: none; /* Only show when connected */
+}
+
+.stat-item.timer i {
+    color: var(--primary) !important;
 }
 
 /* Friend List UI Restored */
@@ -329,6 +362,7 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 10px;
+    max-height: 100%;
 }
 
 .friend-item {
@@ -407,22 +441,27 @@ body {
 
 /* Enlarge Video area */
 .video-container {
-    flex: 3; /* Increased from 2 */
+    flex: 2.5; 
+    position: relative;
+    overflow: hidden;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .video-container {
-        flex: 1.5; /* Larger on mobile too */
+        flex: 1.5; 
     }
     .chat-container {
         flex: 1;
     }
     .stats-overlay {
-        top: 15px;
+        bottom: 160px; /* Above local video */
         right: 10px;
         transform: scale(0.85);
-        transform-origin: top right;
+        transform-origin: bottom right;
+    }
+    .friends-sidebar {
+        display: none; /* Hide by default on mobile, toggled via JS */
     }
 }
 
@@ -449,7 +488,7 @@ body {
 .local-wrapper {
     position: absolute;
     bottom: 20px;
-    right: 20px; /* Moved to right side */
+    right: 20px; 
     width: 30%;
     max-width: 400px;
     min-width: 150px;
@@ -475,7 +514,7 @@ body {
 .video-controls-bottom {
     position: absolute;
     bottom: 20px;
-    left: 20px; /* Kept on left side as requested */
+    left: 20px; 
     display: flex;
     align-items: center;
     gap: 15px;
@@ -660,9 +699,9 @@ body {
 }
 
 .chat-container {
-    width: 350px;
-    min-width: 350px;
-    max-width: 350px;
+    width: 450px; /* Increased from 350px */
+    min-width: 320px;
+    max-width: 450px;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-panel);
@@ -923,7 +962,7 @@ body {
 /* Responsive for Mobile */
 @media (max-width: 768px) {
     #userInfo {
-        display: none !important; /* Hide Google ID on mobile as requested */
+        display: none !important; 
     }
 
     .header {
@@ -946,7 +985,7 @@ body {
     }
 
     .auth-container {
-        display: none; /* Hide login button on mobile to save space if needed, or keep compact */
+        display: none; 
     }
 
     .controls {
@@ -974,12 +1013,9 @@ body {
     }
 
     .btn-text {
-        display: none; /* Hide text on very small screens or keep it minimal */
+        display: none; 
     }
     
-    /* Only show text for primary buttons if there is enough space, but user wanted them small */
-    /* .btn.primary .btn-text, .btn.danger .btn-text { display: block; } */
-
     .logo-text {
         font-size: 1rem;
     }
@@ -991,7 +1027,7 @@ body {
 
     .main-content {
         flex-direction: column;
-        height: calc(100dvh - 60px); /* Adjusted for shorter header */
+        height: calc(100dvh - 60px); 
         position: relative;
     }
 
@@ -1005,12 +1041,12 @@ body {
 
     .chat-container {
         position: absolute;
-        bottom: 80px; /* Above control bar */
+        bottom: 80px; 
         left: 10px;
         width: calc(100% - 20px);
-        max-width: 300px;
+        max-width: 320px;
         height: auto;
-        max-height: 200px;
+        max-height: 250px;
         background: rgba(0,0,0,0.4);
         backdrop-filter: blur(5px);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1042,7 +1078,7 @@ body {
         mask-image: linear-gradient(to top, black 80%, transparent 100%);
         pointer-events: auto;
         overflow-y: auto;
-        max-height: 250px; /* Increased to fit ~10 lines */
+        max-height: 250px; 
     }
 
     .chat-messages-inner {
@@ -1050,7 +1086,7 @@ body {
         gap: 5px;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end; /* Keep messages at the bottom */
+        justify-content: flex-end; 
     }
     
     .message {
@@ -1062,7 +1098,7 @@ body {
     .local-wrapper {
         width: 25%;
         aspect-ratio: 3/4;
-        bottom: 110px; 
+        bottom: 140px; /* Raised from 110px */
         right: 10px;
         z-index: 150;
         border-radius: 8px;
@@ -1094,38 +1130,6 @@ body {
         box-shadow: none;
         padding: 0;
         gap: 15px;
-    }
-
-    /* Mobile specific size reductions */
-    .partner-insta-overlay .social-svg-icon {
-        width: 26px; 
-        height: 26px;
-    }
-
-    .partner-info {
-        font-size: 0.75rem; 
-        padding: 6px 12px;
-        background: transparent;
-        border: none;
-        backdrop-filter: none;
-    }
-
-    .social-btn {
-        width: 34px; 
-        height: 34px;
-    }
-
-    .social-svg-icon {
-        width: 35px; 
-        height: 35px;
-    }
-
-    #sendBtn {
-        display: none;
-    }
-
-    .chat-input-area {
-        padding: 0.6rem;
     }
 }
 

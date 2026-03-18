@@ -4,7 +4,7 @@ import { doc, setDoc, getDoc, updateDoc, onSnapshot, collection, query, where, l
 import { initMedia, findMatch, hangup, setMicGain, sendEffectUpdate, startDirectCall } from './webrtc.js';
 import { sendChatMessage, setupChat, stopChat } from './chat.js';
 import { 
-    searchUserByInstaId, searchUserById, sendFriendRequest, removeFriend, 
+    searchUserByInstaId, searchUserById, sendFriendRequest, removeFriend, blockUser,
     listenToFriends, initiateDirectCall, listenForCalls,
     listenToFriendRequests, acceptFriendRequest, declineFriendRequest
 } from './friends.js';
@@ -31,7 +31,7 @@ const onlineCountEl = document.getElementById('onlineCount');
 
 // Friends UI Elements
 const friendListBtn = document.getElementById('friendListBtn');
-const friendListArea = document.getElementById('friendListArea');
+const friendsSidebar = document.getElementById('friendsSidebar');
 const friendListInner = document.getElementById('friendListInner');
 const friendSearchInput = document.getElementById('friendSearchInput');
 const friendSearchBtn = document.getElementById('friendSearchBtn');
@@ -300,10 +300,10 @@ function setupEventListeners() {
     findMatchBtn.addEventListener('click', () => {
         if (myInfo.gender === 'unspecified') { genderModal.classList.add('active'); return; }
         
-        // FREE PASS check for gender filtering
-        if (myInfo.prefGender !== 'any' && !myInfo.freePass) {
-            freePassModal.classList.add('active');
-            return;
+        // Removed payment block for "Find Stranger"
+        // Ad logic: Show ad before matching based on frequency
+        if (!myInfo.freePass) {
+            adOptimizer.showAdBeforeMatch();
         }
 
         findMatchBtn.disabled = true; hangupBtn.disabled = false;
@@ -350,10 +350,22 @@ function setupEventListeners() {
 
 function toggleFriendList() {
     isShowingFriends = !isShowingFriends;
-    const chatInputArea = document.querySelector('.chat-input-area');
-    if (chatMessages) chatMessages.style.display = isShowingFriends ? 'none' : 'block';
-    if (chatInputArea) chatInputArea.style.display = isShowingFriends ? 'none' : 'flex';
-    if (friendListArea) friendListArea.style.display = isShowingFriends ? 'flex' : 'none';
+    if (friendsSidebar) {
+        if (window.innerWidth > 768) {
+            friendsSidebar.style.display = isShowingFriends ? 'flex' : 'none';
+        } else {
+            // On mobile, simple toggle
+            friendsSidebar.style.display = isShowingFriends ? 'flex' : 'none';
+            if (isShowingFriends) {
+                friendsSidebar.style.position = 'absolute';
+                friendsSidebar.style.left = '0';
+                friendsSidebar.style.top = '0';
+                friendsSidebar.style.bottom = '0';
+                friendsSidebar.style.width = '80%';
+                friendsSidebar.style.zIndex = '1000';
+            }
+        }
+    }
     if (chatHeaderTitle) chatHeaderTitle.textContent = isShowingFriends ? translations[currentLang].friends.toUpperCase() : 'CHAT';
     
     if (isShowingFriends) updateFriendListUI();
@@ -398,7 +410,8 @@ function updateFriendListUI() {
         friendsHeader.textContent = t.my_friends;
         friendListInner.appendChild(friendsHeader);
 
-        friendsList.forEach(f => {
+        // Limit to 10 friends as requested, but scrollable container will handle overflow
+        friendsList.forEach((f, index) => {
             const item = document.createElement('div');
             item.className = 'friend-item';
             const online = f.online && (Date.now() - (f.lastSeen || 0) < 300000);
@@ -412,6 +425,7 @@ function updateFriendListUI() {
                 <div class="friend-actions">
                     <button class="friend-action-btn chat-direct" title="Chat"><i class="material-icons" style="font-size:18px;">chat</i></button>
                     <button class="friend-action-btn call-direct" title="Call"><i class="material-icons" style="font-size:18px;">videocam</i></button>
+                    <button class="friend-action-btn block" title="Block" style="color: #f44336;"><i class="material-icons" style="font-size:18px;">block</i></button>
                     <button class="friend-action-btn delete" title="Remove"><i class="material-icons" style="font-size:18px;">person_remove</i></button>
                 </div>`;
             item.querySelector('.chat-direct').onclick = () => toggleFriendList();
@@ -420,6 +434,7 @@ function updateFriendListUI() {
                 const rid = await initiateDirectCall(f.id, pw);
                 if (rid) { toggleFriendList(); isConnecting = true; addSystemMessage(`Calling ${f.name}...`); await startDirectCall(remoteVideo, myInfo, callbacks, rid, true); }
             };
+            item.querySelector('.block').onclick = () => { if(confirm("Block this user? They will be removed from friends.")) blockUser(f.id); };
             item.querySelector('.delete').onclick = () => { if(confirm("Remove friend?")) removeFriend(f.id); };
             friendListInner.appendChild(item);
         });
@@ -515,10 +530,7 @@ const callbacks = {
         setStatus(msg, true);
         if (msg === "Connected!") {
             isMatched = true; isConnecting = false; stopAutoMatching();
-            // Ad logic
-            if (!myInfo.freePass) {
-                adOptimizer.showAdAfterMatch();
-            }
+            // Ad logic moved to search phase (every 4 matches)
             const transitionOverlay = document.getElementById('transitionOverlay');
             if (transitionOverlay) { transitionOverlay.style.display = 'flex'; setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); }
             hangupBtn.disabled = false; findMatchBtn.disabled = true; messageInput.disabled = false; sendBtn.disabled = false;

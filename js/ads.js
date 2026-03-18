@@ -7,12 +7,7 @@ export class AdOptimizer {
         this.sessionStartTime = Date.now();
         this.idleTimeout = 30000; // 30 seconds
         this.idleTimer = null;
-        this.adPositions = {
-            beforeMatch: true,
-            afterMatch: true,
-            onExit: true,
-            onIdle: true
-        };
+        this.matchCounter = 0; // Track successful matches
         
         this.init();
     }
@@ -31,8 +26,6 @@ export class AdOptimizer {
         console.log(`[AdOptimizer] Requesting ad of type: ${type}`);
         
         // This is a placeholder for actual ad provider integration (e.g., Google Publisher Tags)
-        // For now, we'll simulate the ad display logic.
-        
         const adOverlay = document.createElement('div');
         adOverlay.id = 'ad-overlay';
         adOverlay.style.cssText = `
@@ -85,10 +78,12 @@ export class AdOptimizer {
     }
 
     /**
-     * Triggered after a match is successfully established
+     * Triggered BEFORE a match is established (during search)
+     * Show ad every 4 successful matches
      */
-    showAdAfterMatch() {
-        if (!this.adDisplayed) {
+    showAdBeforeMatch() {
+        this.matchCounter++;
+        if (this.matchCounter % 4 === 0 && !this.adDisplayed) {
             this.displayAd('interstitial');
         }
     }

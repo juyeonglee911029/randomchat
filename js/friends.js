@@ -206,6 +206,29 @@ export function listenForCalls(onCall) {
     });
 }
 
+/**
+ * Block a user
+ */
+export async function blockUser(userId) {
+    if (!auth.currentUser || !userId) return;
+    const myId = auth.currentUser.uid;
+    const blockRef = doc(db, 'users', myId, 'blocked', userId);
+    try {
+        await setDoc(blockRef, {
+            id: userId,
+            blockedAt: Date.now()
+        });
+        // Also remove from friends if they are friends
+        await removeFriend(userId);
+        alert("User blocked.");
+    } catch (error) {
+        console.error("Error blocking user:", error);
+    }
+}
+
+/**
+ * Remove a friend
+ */
 export async function removeFriend(friendId) {
     if (!auth.currentUser || !friendId) return;
     const myId = auth.currentUser.uid;
@@ -214,7 +237,7 @@ export async function removeFriend(friendId) {
     batch.delete(doc(db, 'users', friendId, 'friends', myId));
     try {
         await batch.commit();
-        alert("Friend removed.");
+        // alert("Friend removed."); // Removed alert for silent removal when blocking
     } catch (error) {
         console.error("Error removing friend:", error);
     }
