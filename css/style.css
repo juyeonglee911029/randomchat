@@ -279,10 +279,10 @@ body {
     color: var(--primary);
 }
 
-/* Online Counter & Timer Display - Repositioned to bottom */
+/* Online Counter & Timer Display - Repositioned to top right below logo */
 .stats-overlay {
     position: absolute;
-    bottom: 80px; /* Above control bar */
+    top: 55px; /* Directly below the logo overlay (which is at top: 20px) */
     right: 20px;
     display: flex;
     flex-direction: column;

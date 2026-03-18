@@ -297,13 +297,13 @@ function setupEventListeners() {
         localVideo.style.filter = `brightness(${currentBrightness}%)`;
         sendEffectUpdate({ brightness: currentBrightness });
     });
-    findMatchBtn.addEventListener('click', () => {
+    findMatchBtn.addEventListener('click', async () => {
         if (myInfo.gender === 'unspecified') { genderModal.classList.add('active'); return; }
         
-        // Removed payment block for "Find Stranger"
         // Ad logic: Show ad before matching based on frequency
+        // We await this so matching only starts AFTER the ad is closed
         if (!myInfo.freePass) {
-            adOptimizer.showAdBeforeMatch();
+            await adOptimizer.showAdBeforeMatch();
         }
 
         findMatchBtn.disabled = true; hangupBtn.disabled = false;
