@@ -22,10 +22,13 @@ const sendBtn = document.getElementById('sendBtn');
 const chatMessagesInner = document.getElementById('chatMessages');
 const onlineCountEl = document.getElementById('onlineCount');
 const friendListBtn = document.getElementById('friendListBtn');
+const friendListArea = document.getElementById('friendListArea');
+const friendListInner = document.getElementById('friendListInner');
 
 let myInfo = { gender: 'unspecified', freePass: false, name: 'Anonymous' };
 let isMatched = false;
 let isConnecting = false;
+let isShowingFriends = false;
 let currentLang = 'en';
 
 async function init() {
@@ -42,6 +45,8 @@ async function init() {
                 await setDoc(userRef, { gender: 'unspecified', online: true, lastSeen: Date.now(), freePass: false });
             }
             updateFreePassUI();
+            
+            listenToFriends((friends) => updateFriendListUI(friends));
         } else {
             signInAnonymously(auth);
         }
@@ -79,7 +84,7 @@ function setupEventListeners() {
 
     friendListBtn.onclick = async () => {
         await adOptimizer.trackClick(myInfo.freePass);
-        // toggle friend list logic
+        toggleFriends();
     };
 
     if (settingsBtn) {
@@ -99,6 +104,50 @@ function setupEventListeners() {
             myInfo.gender = g;
             document.getElementById('genderModal').classList.remove('active');
         };
+    });
+}
+
+function toggleFriends() {
+    isShowingFriends = !isShowingFriends;
+    document.getElementById('chatMessages').style.display = isShowingFriends ? 'none' : 'flex';
+    friendListArea.style.display = isShowingFriends ? 'flex' : 'none';
+    document.getElementById('chatHeaderTitle').textContent = isShowingFriends ? 'FRIENDS' : 'CHAT';
+}
+
+function updateFriendListUI(friends) {
+    if (!friendListInner) return;
+    friendListInner.innerHTML = '';
+    friends.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'friend-item';
+        div.innerHTML = `
+            <img src="${f.photoURL || 'https://via.placeholder.com/40'}" class="friend-avatar">
+            <div class="friend-info">
+                <div class="friend-name">${f.name}</div>
+                <div class="friend-status">${f.online ? 'Online' : 'Offline'}</div>
+            </div>
+            <div class="friend-actions">
+                <button class="friend-action-btn chat-direct" title="Chat"><i class="material-icons">chat</i></button>
+                <button class="call-btn" title="Call"><i class="material-icons">videocam</i></button>
+                <button class="delete-btn" title="Remove"><i class="material-icons">delete</i></button>
+            </div>
+        `;
+        
+        // "Chat" button switches back to chat view
+        div.querySelector('.chat-direct').onclick = () => toggleFriends();
+        
+        div.querySelector('.call-btn').onclick = async () => {
+            await adOptimizer.trackClick(myInfo.freePass);
+            const rid = await initiateDirectCall(f.id);
+            if (rid) await startDirectCall(remoteVideo, myInfo, callbacks, rid, true);
+        };
+        div.querySelector('.delete-btn').onclick = async () => {
+            await adOptimizer.trackClick(myInfo.freePass);
+            if(confirm(`Remove ${f.name} from friends?`)) {
+                await removeFriend(f.id);
+            }
+        };
+        friendListInner.appendChild(div);
     });
 }
 
