@@ -773,6 +773,71 @@ body {
     align-items: center;
 }
 
+/* FREE PASS Styles */
+.freepass-off {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #888 !important;
+}
+
+.freepass-off i {
+    color: #888 !important;
+}
+
+.freepass-on {
+    background: linear-gradient(135deg, #ffcc00, #ff9900) !important;
+    color: #000 !important;
+    font-weight: 800 !important;
+    border: none !important;
+    box-shadow: 0 0 15px rgba(255, 204, 0, 0.4);
+}
+
+.freepass-on i {
+    color: #000 !important;
+}
+
+.free-pass-content {
+    max-width: 320px !important;
+    text-align: center;
+    padding: 30px !important;
+    border: 2px solid var(--primary) !important;
+    background: #1a1a1a !important;
+}
+
+.free-pass-title {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--primary);
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+}
+
+.free-pass-benefits {
+    text-align: left;
+    margin-bottom: 30px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.free-pass-benefits p {
+    margin: 10px 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+}
+
+.free-pass-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.free-pass-actions .btn {
+    width: 100%;
+    justify-content: center;
+}
+
 .modal.active { display: flex; }
 
 .modal-content {

@@ -59,10 +59,11 @@ const genderBtns = document.querySelectorAll('.gender-btn');
 const confirmGenderBtn = document.getElementById('confirmGenderBtn');
 let selectedGender = null;
 
-// Premium/Payment Elements
-const paymentModal = document.getElementById('paymentModal');
-const closePaymentModal = document.getElementById('closePaymentModal');
-const checkoutBtn = document.getElementById('checkoutBtn');
+// FREE PASS Elements
+const freePassBtn = document.getElementById('freePassBtn');
+const freePassModal = document.getElementById('freePassModal');
+const payFreePassBtn = document.getElementById('payFreePassBtn');
+const cancelFreePassBtn = document.getElementById('cancelFreePassBtn');
 
 // User Preferences
 let myInfo = {
@@ -73,7 +74,7 @@ let myInfo = {
     name: 'Anonymous',
     photoUrl: '',
     showInfo: true,
-    isPremium: false
+    freePass: false
 };
 
 // State
@@ -131,13 +132,33 @@ async function init() {
                 const userRef = doc(db, 'users', user.uid);
                 const userSnap = await getDoc(userRef);
                 if (userSnap.exists()) {
-                    Object.assign(myInfo, userSnap.data());
+                    const data = userSnap.data();
+                    // Ensure freePass exists
+                    if (data.freePass === undefined) {
+                        await updateDoc(userRef, { freePass: false });
+                        data.freePass = false;
+                    }
+                    Object.assign(myInfo, data);
                     await updateDoc(userRef, { online: true, lastSeen: Date.now() });
                 } else {
-                    await setDoc(userRef, { ...myInfo, email: user.email || '', photoURL: myInfo.photoUrl || '', online: true, createdAt: Date.now(), lastSeen: Date.now() });
+                    // New User initialization
+                    const newUser = { 
+                        ...myInfo, 
+                        email: user.email || '', 
+                        photoURL: myInfo.photoUrl || '', 
+                        online: true, 
+                        createdAt: Date.now(), 
+                        lastSeen: Date.now(),
+                        freePass: false // Default to false
+                    };
+                    await setDoc(userRef, newUser);
+                    Object.assign(myInfo, newUser);
                 }
+                updateFreePassUI();
                 if (myInfo.gender === 'unspecified') genderModal.classList.add('active');
-            } catch (err) {}
+            } catch (err) {
+                console.error("Auth state processing error:", err);
+            }
             
             loadSettingsToUI();
             if (unsubFriends) unsubFriends();
@@ -181,6 +202,21 @@ async function init() {
     }, 30000);
 }
 
+function updateFreePassUI() {
+    if (!freePassBtn) return;
+    if (myInfo.freePass) {
+        freePassBtn.classList.remove('freepass-off');
+        freePassBtn.classList.add('freepass-on');
+        freePassBtn.querySelector('.btn-text').textContent = 'FREE PASS (ON)';
+        freePassBtn.querySelector('i').textContent = 'stars';
+    } else {
+        freePassBtn.classList.remove('freepass-on');
+        freePassBtn.classList.add('freepass-off');
+        freePassBtn.querySelector('.btn-text').textContent = 'FREE PASS (OFF)';
+        freePassBtn.querySelector('i').textContent = 'star_outline';
+    }
+}
+
 function applyTranslations() {
     const t = translations[currentLang];
     if (findMatchBtn) {
@@ -204,6 +240,39 @@ function applyTranslations() {
 }
 
 function setupEventListeners() {
+    // FREE PASS listeners
+    freePassBtn?.addEventListener('click', () => {
+        if (!myInfo.freePass) {
+            freePassModal.classList.add('active');
+        } else {
+            alert("Your FREE PASS is currently active!");
+        }
+    });
+
+    cancelFreePassBtn?.addEventListener('click', () => {
+        freePassModal.classList.remove('active');
+    });
+
+    payFreePassBtn?.addEventListener('click', () => {
+        if (!auth.currentUser || auth.currentUser.isAnonymous) {
+            alert("Please login with Google to purchase FREE PASS.");
+            return;
+        }
+        // Revolut Checkout Link (Placeholder)
+        const revolutLink = "https://revolut.me/juyeonglee"; // User should replace with actual Revolut Pay link
+        window.open(revolutLink, '_blank');
+        
+        // For testing purposes, we add a way to simulate successful payment
+        if (confirm("Did you complete the payment? (Simulation)")) {
+            updateDoc(doc(db, 'users', auth.currentUser.uid), { freePass: true }).then(() => {
+                myInfo.freePass = true;
+                updateFreePassUI();
+                freePassModal.classList.remove('active');
+                alert("FREE PASS Activated! Enjoy premium features.");
+            });
+        }
+    });
+
     micToggleBtn?.addEventListener('click', () => {
         isMicMuted = !isMicMuted;
         setMicGain(isMicMuted ? 0 : 1);
@@ -231,8 +300,9 @@ function setupEventListeners() {
     findMatchBtn.addEventListener('click', () => {
         if (myInfo.gender === 'unspecified') { genderModal.classList.add('active'); return; }
         
-        if (myInfo.prefGender !== 'any' && !myInfo.isPremium) {
-            paymentModal.classList.add('active');
+        // FREE PASS check for gender filtering
+        if (myInfo.prefGender !== 'any' && !myInfo.freePass) {
+            freePassModal.classList.add('active');
             return;
         }
 
@@ -276,21 +346,6 @@ function setupEventListeners() {
     });
     googleLoginBtn.addEventListener('click', () => signInWithPopup(auth, provider).catch(console.error));
     userInfo.addEventListener('click', () => { if(confirm("Logout?")) signOut(auth).then(() => location.reload()); });
-
-    closePaymentModal?.addEventListener('click', () => paymentModal.classList.remove('active'));
-    checkoutBtn?.addEventListener('click', async () => {
-        if (!auth.currentUser) { alert("Please login first!"); return; }
-        checkoutBtn.disabled = true; checkoutBtn.textContent = 'Processing...';
-        setTimeout(async () => {
-            try {
-                await updateDoc(doc(db, 'users', auth.currentUser.uid), { isPremium: true });
-                myInfo.isPremium = true;
-                alert("Subscription activated! You can now use gender filters.");
-                paymentModal.classList.remove('active');
-            } catch (e) { alert("Payment failed."); }
-            checkoutBtn.disabled = false; checkoutBtn.textContent = translations[currentLang].subscribe_now;
-        }, 2000);
-    });
 }
 
 function toggleFriendList() {
@@ -460,7 +515,10 @@ const callbacks = {
         setStatus(msg, true);
         if (msg === "Connected!") {
             isMatched = true; isConnecting = false; stopAutoMatching();
-            adOptimizer.showAdAfterMatch();
+            // Ad logic
+            if (!myInfo.freePass) {
+                adOptimizer.showAdAfterMatch();
+            }
             const transitionOverlay = document.getElementById('transitionOverlay');
             if (transitionOverlay) { transitionOverlay.style.display = 'flex'; setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1500); }
             hangupBtn.disabled = false; findMatchBtn.disabled = true; messageInput.disabled = false; sendBtn.disabled = false;

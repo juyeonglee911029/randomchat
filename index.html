@@ -32,6 +32,10 @@
 
                 <div class="header-right">
                     <div class="controls">
+                        <button id="freePassBtn" class="btn secondary freepass-off">
+                            <i class="material-icons">star_outline</i>
+                            <span class="btn-text">FREE PASS (OFF)</span>
+                        </button>
                         <button id="findMatchBtn" class="btn primary">
                             <i class="material-icons">shuffle</i>
                             <span class="btn-text">Find Stranger</span>
@@ -257,27 +261,17 @@
             </div>
         </div>
 
-        <!-- Payment / Subscription Modal -->
-        <div id="paymentModal" class="modal">
-            <div class="modal-content">
-                <span class="close-btn" id="closePaymentModal">&times;</span>
-                <h2 style="color: var(--primary);">PREMIUM UPGRADE</h2>
-                <div class="modal-body">
-                    <p style="text-align: center; margin-bottom: 20px;">To use <strong>Gender Filtering</strong>, you need a Premium Subscription.</p>
-                    <div style="background: rgba(255, 204, 0, 0.1); padding: 15px; border-radius: 10px; border-left: 4px solid var(--primary); margin-bottom: 20px;">
-                        <ul style="list-style: none; padding: 0;">
-                            <li style="margin-bottom: 8px;"><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Match by Gender (Male/Female)</li>
-                            <li style="margin-bottom: 8px;"><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Ad-free Experience</li>
-                            <li style="margin-bottom: 8px;"><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Premium Badge on Profile</li>
-                            <li><i class="material-icons" style="font-size: 16px; vertical-align: middle; color: var(--primary);">check_circle</i> Priority Matching</li>
-                        </ul>
-                    </div>
-                    <div style="background: #222; padding: 20px; border-radius: 15px; border: 1px solid #444; text-align: center;">
-                        <h3 style="margin-bottom: 10px;">Monthly Pass</h3>
-                        <div style="font-size: 2rem; font-weight: 800; color: var(--primary); margin-bottom: 20px;">$9.99<span style="font-size: 0.9rem; color: var(--text-muted); font-weight: normal;">/month</span></div>
-                        <button id="checkoutBtn" class="btn primary" style="width: 100%; justify-content: center;">Subscribe Now</button>
-                    </div>
-                    <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 15px;">Secure payment via Credit Card / PayPal</p>
+        <!-- FREE PASS Modal -->
+        <div id="freePassModal" class="modal">
+            <div class="modal-content free-pass-content">
+                <h2 class="free-pass-title">FREE PASS</h2>
+                <div class="free-pass-benefits">
+                    <p>1. GENDER PREFERENCE MATCH</p>
+                    <p>2. NO ADS</p>
+                </div>
+                <div class="free-pass-actions">
+                    <button id="payFreePassBtn" class="btn primary">Payment</button>
+                    <button id="cancelFreePassBtn" class="btn danger">Cancel</button>
                 </div>
             </div>
         </div>
