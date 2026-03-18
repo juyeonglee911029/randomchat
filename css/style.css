@@ -55,12 +55,18 @@ body {
     width: 100%;
 }
 
+.logo-text {
+    font-weight: 900;
+    color: var(--primary);
+    letter-spacing: -1px;
+}
+
 .header-right { display: flex; align-items: center; gap: 1rem; }
 
-/* Stats Overlay - Top Right Directly Below Logo Area */
+/* Stats Overlay - Directly below logo area */
 .stats-overlay {
     position: absolute;
-    top: 55px; /* Directly below the top-20px logo overlay */
+    top: 55px; /* Below the logo overlay */
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -139,7 +145,7 @@ body {
     border-radius: 40px;
 }
 
-/* Partner Info (Top Left Overlay) - Reduced Size */
+/* Partner Info (Top Left) - 3pt Smaller */
 .partner-info {
     position: absolute;
     top: 15px;
@@ -147,7 +153,7 @@ body {
     background: rgba(0,0,0,0.4);
     padding: 4px 10px;
     border-radius: 20px;
-    font-size: 0.7rem; /* Smaller Font */
+    font-size: 0.65rem; /* Smaller font */
     color: var(--primary);
     font-weight: 700;
     z-index: 50;
@@ -156,9 +162,9 @@ body {
     gap: 6px;
 }
 
-.partner-insta-overlay svg { width: 14px; height: 14px; } /* Smaller Icon */
+.partner-insta-overlay svg { width: 12px; height: 12px; } /* Smaller icon */
 
-/* Social Buttons (Bottom Right) - Reduced Size by 50% */
+/* Partner Social Icons (Bottom Right) - 50% Size */
 .floating-social {
     position: absolute;
     bottom: 15px;
@@ -169,7 +175,7 @@ body {
 }
 
 .social-btn {
-    width: 20px; /* Half Size */
+    width: 20px; /* Reduced by 50% */
     height: 20px;
     color: var(--primary);
 }
@@ -212,7 +218,7 @@ body {
 #messageInput {
     flex: 1;
     background: var(--bg-dark);
-    border: none; /* No Border */
+    border: none; 
     color: white;
     padding: 0.8rem 1.2rem;
     border-radius: 30px;
@@ -231,7 +237,7 @@ body {
     cursor: pointer;
 }
 
-/* Mobile Fixes - Full Width & Clean Style */
+/* Mobile Fixes - App-like Full Width Chat */
 @media (max-width: 768px) {
     .ad-sidebar { display: none; }
     .header { padding: 0.3rem 0.8rem; }
@@ -242,9 +248,9 @@ body {
         bottom: 80px;
         left: 0; 
         right: 0;
-        width: 100%; /* Full Width */
+        width: 100%; /* Full width */
         max-height: 250px;
-        background: rgba(0,0,0,0.5); /* No mosaic, semi-transparent */
+        background: rgba(0,0,0,0.5); /* Semi-transparent, no mosaic */
         backdrop-filter: blur(10px);
         border: none;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -265,17 +271,7 @@ body {
         height: 40px;
     }
 
-    #sendBtn {
-        width: 40px;
-        height: 40px;
-    }
-
-    .local-wrapper {
-        width: 120px;
-        bottom: 140px; /* Above chat */
-        right: 15px;
-    }
-
+    .local-wrapper { width: 120px; bottom: 140px; right: 15px; }
     .stats-overlay { top: 65px; right: 15px; }
 }
 
@@ -302,3 +298,11 @@ body {
 .message.me { align-self: flex-end; background: var(--chat-me); color: #000; border-bottom-right-radius: 4px; }
 .message.them { align-self: flex-start; background: var(--chat-them); color: #000; border-bottom-left-radius: 4px; }
 .system-message { align-self: center; color: var(--text-muted); font-size: 0.75rem; text-align: center; }
+
+.modal {
+    display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    justify-content: center; align-items: center;
+}
+.modal.active { display: flex; }
+.modal-content { background: var(--bg-panel); padding: 2rem; border-radius: 20px; width: 90%; max-width: 400px; border: 1px solid var(--border-color); }
