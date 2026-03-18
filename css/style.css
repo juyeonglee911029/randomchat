@@ -254,35 +254,10 @@ body {
     align-items: center;
 }
 
-.friends-sidebar {
-    width: 280px;
-    background-color: var(--bg-panel);
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    z-index: 5;
-    transition: all 0.3s ease;
-    overflow: hidden;
-}
-
-.friends-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    text-align: center;
-    background-color: rgba(0,0,0,0.2);
-}
-
-.friends-header h3 {
-    font-size: 1rem;
-    letter-spacing: 2px;
-    color: var(--primary);
-}
-
-/* Online Counter & Timer Display - Repositioned to bottom */
+/* Online Counter & Timer Display - Repositioned to top right below logo */
 .stats-overlay {
     position: absolute;
-    bottom: 80px; /* Above control bar */
+    top: 55px; /* Directly below the logo overlay */
     right: 20px;
     display: flex;
     flex-direction: column;
@@ -320,64 +295,53 @@ body {
     color: var(--primary) !important;
 }
 
-/* Friend List UI Restored */
-.friend-list-area {
+/* Friends Sidebar (Left) */
+.friends-sidebar {
+    width: 320px; /* Increased width */
+    background-color: var(--bg-panel);
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    height: 100%;
-    background: var(--bg-panel);
+    flex-shrink: 0;
+    z-index: 5;
+    transition: all 0.3s ease;
+    overflow: hidden;
 }
 
-.friend-search-area {
-    padding: 15px;
-    display: flex;
-    gap: 10px;
+.friends-header {
+    padding: 1rem;
     border-bottom: 1px solid var(--border-color);
+    text-align: center;
+    background-color: rgba(0,0,0,0.2);
 }
 
-.friend-search-area input {
-    flex: 1;
-    background: var(--bg-dark);
-    border: 1px solid var(--border-color);
-    padding: 8px 15px;
-    border-radius: 20px;
-    color: white;
-    font-size: 0.9rem;
-}
-
-.search-btn {
-    background: var(--primary);
-    border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: black;
+.friends-header h3 {
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--primary);
 }
 
 .friend-list-inner {
     flex: 1;
     overflow-y: auto;
-    padding: 10px;
-    max-height: 100%;
+    padding: 15px;
 }
 
 .friend-item {
     display: flex;
     align-items: center;
     padding: 12px;
-    gap: 12px;
+    gap: 15px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 12px;
     margin-bottom: 10px;
     transition: background 0.2s;
+    border: 1px solid transparent;
 }
 
 .friend-item:hover {
     background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 215, 0, 0.2);
 }
 
 .friend-avatar {
@@ -390,11 +354,15 @@ body {
 
 .friend-info {
     flex: 1;
+    min-width: 0;
 }
 
 .friend-name {
     font-weight: 700;
     font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .friend-status {
@@ -407,43 +375,114 @@ body {
     gap: 8px;
 }
 
-.friend-action-btn {
-    background: transparent;
+.friend-action-btn, .call-direct, .chat-direct {
+    background: rgba(255, 255, 255, 0.05);
     border: none;
     color: var(--primary);
     cursor: pointer;
-    padding: 5px;
+    padding: 6px;
     border-radius: 50%;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.friend-action-btn:hover {
-    background: rgba(255, 215, 0, 0.1);
-}
-
-.friend-action-btn.delete {
-    color: var(--danger);
+.friend-action-btn:hover, .call-direct:hover, .chat-direct:hover {
+    background: var(--primary);
+    color: black;
+    transform: scale(1.1);
 }
 
 .friend-action-btn.delete:hover {
-    background: rgba(207, 102, 121, 0.1);
+    background: var(--danger);
+    color: white;
 }
 
-.chat-header-btn {
-    background: transparent;
-    border: none;
-    color: var(--primary);
+/* Payment Form Styles */
+.payment-form {
+    text-align: left;
+    margin-top: 20px;
+}
+
+.payment-form .form-group {
+    margin-bottom: 15px;
+}
+
+.payment-form label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.payment-form input, .payment-form select {
+    width: 100%;
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.payment-row {
+    display: flex;
+    gap: 10px;
+}
+
+.plan-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.plan-option {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 15px;
     cursor: pointer;
-    position: absolute;
-    right: 15px;
-    top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.plan-option:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.plan-option.selected {
+    border-color: var(--primary);
+    background: rgba(255, 215, 0, 0.05);
+}
+
+.plan-info .title {
+    display: block;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.plan-info .price {
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.discount-badge {
+    background: var(--danger);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 800;
 }
 
 /* Enlarge Video area */
 .video-container {
     flex: 2.5; 
-    position: relative;
-    overflow: hidden;
 }
 
 /* Responsive adjustments */
@@ -459,9 +498,6 @@ body {
         right: 10px;
         transform: scale(0.85);
         transform-origin: bottom right;
-    }
-    .friends-sidebar {
-        display: none; /* Hide by default on mobile, toggled via JS */
     }
 }
 
@@ -699,7 +735,7 @@ body {
 }
 
 .chat-container {
-    width: 450px; /* Increased from 350px */
+    width: 450px; 
     min-width: 320px;
     max-width: 450px;
     display: flex;
@@ -836,11 +872,13 @@ body {
 }
 
 .free-pass-content {
-    max-width: 320px !important;
+    max-width: 400px !important; /* Increased width */
     text-align: center;
     padding: 30px !important;
     border: 2px solid var(--primary) !important;
     background: #1a1a1a !important;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .free-pass-title {
@@ -870,6 +908,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    margin-top: 20px;
 }
 
 .free-pass-actions .btn {
@@ -957,180 +996,6 @@ body {
     background: var(--primary);
     color: black;
     border-color: var(--primary);
-}
-
-/* Responsive for Mobile */
-@media (max-width: 768px) {
-    #userInfo {
-        display: none !important; 
-    }
-
-    .header {
-        padding: 0.3rem 0.5rem;
-        min-height: auto;
-    }
-    
-    .header-main {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 5px;
-    }
-
-    .header-right {
-        width: auto;
-        flex-direction: row;
-        gap: 5px;
-        align-items: center;
-    }
-
-    .auth-container {
-        display: none; 
-    }
-
-    .controls {
-        display: flex;
-        flex-direction: row;
-        gap: 4px;
-        width: auto;
-        padding-top: 0;
-        border-top: none;
-    }
-
-    .btn {
-        height: 34px; 
-        font-size: 0.75rem;
-        padding: 0 0.4rem;
-        gap: 2px;
-    }
-
-    .btn i {
-        font-size: 16px;
-    }
-
-    #settingsBtn {
-        width: 34px;
-    }
-
-    .btn-text {
-        display: none; 
-    }
-    
-    .logo-text {
-        font-size: 1rem;
-    }
-    
-    .logo-icon-wrapper {
-        width: 28px;
-        height: 28px;
-    }
-
-    .main-content {
-        flex-direction: column;
-        height: calc(100dvh - 60px); 
-        position: relative;
-    }
-
-    .ad-sidebar { display: none; }
-
-    .video-container {
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 1;
-    }
-
-    .chat-container {
-        position: absolute;
-        bottom: 80px; 
-        left: 10px;
-        width: calc(100% - 20px);
-        max-width: 320px;
-        height: auto;
-        max-height: 250px;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        z-index: 100;
-        pointer-events: none; 
-        overflow: hidden;
-    }
-
-    .chat-header { display: none; }
-
-    .chat-input-area {
-        background: rgba(0,0,0,0.6);
-        padding: 5px 8px;
-        pointer-events: auto;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        border-top: none;
-        gap: 5px;
-    }
-    
-    #messageInput {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.85rem;
-        height: 30px;
-    }
-
-    .chat-messages {
-        flex: 1;
-        mask-image: linear-gradient(to top, black 80%, transparent 100%);
-        pointer-events: auto;
-        overflow-y: auto;
-        max-height: 250px; 
-    }
-
-    .chat-messages-inner {
-        padding: 8px;
-        gap: 5px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end; 
-    }
-    
-    .message {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.85rem;
-        max-width: 90%;
-    }
-
-    .local-wrapper {
-        width: 25%;
-        aspect-ratio: 3/4;
-        bottom: 140px; /* Raised from 110px */
-        right: 10px;
-        z-index: 150;
-        border-radius: 8px;
-    }
-
-    .local-wrapper.expanded {
-        width: 35%;
-    }
-
-    #localVideo {
-        object-fit: cover;
-    }
-
-    .video-controls-bottom {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 200;
-        background: rgba(0,0,0,0.6);
-        padding: 5px 15px;
-        border-radius: 30px;
-        backdrop-filter: blur(10px);
-    }
-
-    .video-controls-bottom-inner {
-        background: transparent;
-        border: none;
-        box-shadow: none;
-        padding: 0;
-        gap: 15px;
-    }
 }
 
 /* Animations */
