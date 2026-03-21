@@ -18,8 +18,9 @@ YELLOWCHAT is a real-time random video chat application built with modern web st
 - **Visual Effects:** Brightness control and mirror toggle for local video.
 - **Social Integration:** Instagram and WhatsApp ID sharing.
 - **Friends System:** Search, add, and call friends directly.
-- **Ad Integration:** Optimized ad placements to balance monetization and UX.
+- **Ad Integration:** Sponsored ads appear every 3 clicks of "Find Stranger" for non-premium users.
 - **Free Pass (Premium):** Subscription-based access to gender filtering and ad-free experience.
+- **Draggable Webcam:** Users can move their own video feed around the screen with boundary constraints.
 
 ## Recent Updates & Current Tasks
 

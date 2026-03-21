@@ -63,15 +63,45 @@ body {
 
 .header-right { display: flex; align-items: center; gap: 1rem; }
 
+/* Video Area Overlay - Logo */
+.video-logo-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 150;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 6px 15px;
+    border-radius: 30px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.video-logo-overlay .logo-icon-wrapper.small {
+    width: 24px;
+    height: 24px;
+    color: var(--primary);
+}
+
+.video-logo-overlay .logo-text {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: 1px;
+}
+
 /* Stats Overlay - Directly below logo area */
 .stats-overlay {
     position: absolute;
-    top: 55px; /* Below the logo overlay */
+    top: 75px; /* Increased to be below the new logo overlay */
     right: 20px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 5px;
+    gap: 8px;
     z-index: 150;
     pointer-events: none;
 }
@@ -80,14 +110,14 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 4px 12px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px 12px;
     border-radius: 20px;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--primary);
     backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 215, 0, 0.2);
+    border: 1px solid rgba(255, 215, 0, 0.1);
 }
 
 .stat-item i { color: #4CAF50 !important; font-size: 12px; }
@@ -129,6 +159,8 @@ body {
     box-shadow: 0 10px 30px rgba(0,0,0,0.8);
     z-index: 50;
     border: 2px solid rgba(255, 255, 255, 0.1);
+    cursor: move; /* Indicate it's draggable */
+    touch-action: none; /* Prevent scrolling while dragging */
 }
 
 #localVideo { width: 100%; height: 100%; object-fit: cover; }
@@ -244,35 +276,57 @@ body {
     .video-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
 
     .chat-container {
-        position: absolute;
-        bottom: 80px;
+        position: fixed; /* Changed to fixed for better mobile reliability */
+        bottom: 0;
         left: 0; 
-        right: 0;
-        width: 100%; /* Full width */
-        max-height: 250px;
-        background: rgba(0,0,0,0.5); /* Semi-transparent, no mosaic */
-        backdrop-filter: blur(10px);
+        width: 100% !important;
+        height: 280px;
+        background: rgba(10, 10, 10, 0.7);
+        backdrop-filter: blur(15px);
         border: none;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        z-index: 100;
-        border-radius: 20px 20px 0 0;
+        border-top: 1px solid rgba(255, 215, 0, 0.2);
+        z-index: 1000; /* High z-index to stay on top of videos */
+        border-radius: 25px 25px 0 0;
+        display: flex;
+        flex-direction: column;
     }
 
-    .chat-header { display: none; }
+    .chat-header { 
+        display: flex; 
+        padding: 8px; 
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        justify-content: center;
+    }
+    .chat-header h2 { font-size: 0.8rem; color: var(--text-muted); }
     
-    .chat-input-area {
-        background: transparent;
+    .chat-messages {
+        flex: 1;
         padding: 10px 15px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .chat-input-area {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 12px 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: constant(safe-area-inset-bottom);
+        margin-bottom: env(safe-area-inset-bottom);
     }
 
     #messageInput {
-        background: rgba(0, 0, 0, 0.3);
-        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        height: 44px;
+        font-size: 1rem;
     }
 
-    .local-wrapper { width: 120px; bottom: 140px; right: 15px; }
-    .stats-overlay { top: 65px; right: 15px; }
+    .local-wrapper { 
+        width: 110px; 
+        bottom: 290px !important; /* Always stay above chat container */
+        right: 15px; 
+        z-index: 1100;
+    }
+    .stats-overlay { top: 70px; right: 15px; }
+    .video-logo-overlay { top: 15px; right: 15px; padding: 4px 10px; }
+    .video-logo-overlay .logo-text { font-size: 0.8rem; }
 }
 
 /* Matching UI */

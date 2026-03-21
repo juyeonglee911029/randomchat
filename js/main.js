@@ -24,6 +24,7 @@ const onlineCountEl = document.getElementById('onlineCount');
 const friendListBtn = document.getElementById('friendListBtn');
 const friendListArea = document.getElementById('friendListArea');
 const friendListInner = document.getElementById('friendListInner');
+const localVideoContainer = document.getElementById('localVideoContainer');
 
 let myInfo = { gender: 'unspecified', freePass: false, name: 'Anonymous' };
 let isMatched = false;
@@ -34,6 +35,7 @@ let currentLang = 'en';
 async function init() {
     await initMedia(localVideo);
     setupEventListeners();
+    setupDraggableLocalVideo();
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
@@ -57,6 +59,158 @@ async function init() {
     });
 }
 
+function setupDraggableLocalVideo() {
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    const dragStart = (e) => {
+        if (e.type === "touchstart") {
+            initialX = e.touches[0].clientX - xOffset;
+            initialY = e.touches[0].clientY - yOffset;
+        } else {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+        }
+        if (e.target === localVideo || e.target === localVideoContainer) {
+            isDragging = true;
+        }
+    };
+
+    const dragEnd = () => {
+        initialX = currentX;
+        initialY = currentY;
+        isDragging = false;
+    };
+
+    const drag = (e) => {
+        if (isDragging) {
+            e.preventDefault();
+            if (e.type === "touchmove") {
+                currentX = e.touches[0].clientX - initialX;
+                currentY = e.touches[0].clientY - initialY;
+            } else {
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+            }
+
+            // Boundary checks
+            const container = document.querySelector('.video-container');
+            const rect = localVideoContainer.getBoundingClientRect();
+            const parentRect = container.getBoundingClientRect();
+            
+            // On mobile, keep it above the chat container
+            let minBottom = 0;
+            if (window.innerWidth <= 768) {
+                minBottom = 280; // Height of mobile chat container
+            }
+
+            const maxX = parentRect.width - rect.width;
+            const maxY = parentRect.height - rect.height - minBottom;
+
+            // Constrain
+            xOffset = Math.min(Math.max(currentX, -parentRect.width + rect.width + 20), 20); // Relative to initial position (bottom-right 20px)
+            // Wait, simpler: use direct positioning or transform. 
+            // Let's stick to xOffset/yOffset for transform.
+            
+            setTranslate(currentX, currentY, localVideoContainer);
+        }
+    };
+
+    function setTranslate(xPos, yPos, el) {
+        // Simple boundary check relative to viewport/container
+        const rect = el.getBoundingClientRect();
+        const parent = document.querySelector('.video-container').getBoundingClientRect();
+        const chatHeight = window.innerWidth <= 768 ? 280 : 0;
+
+        let finalX = xPos;
+        let finalY = yPos;
+
+        // Ensure it doesn't go off screen
+        // (This part is tricky with relative offsets, better to use absolute positioning logic)
+        el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+    }
+
+    // Better implementation of dragging
+    let active = false;
+    let offset = [0,0];
+
+    localVideoContainer.addEventListener("mousedown", (e) => {
+        active = true;
+        offset = [
+            localVideoContainer.offsetLeft - e.clientX,
+            localVideoContainer.offsetTop - e.clientY
+        ];
+    }, true);
+
+    document.addEventListener("mouseup", () => {
+        active = false;
+    }, true);
+
+    document.addEventListener("mousemove", (event) => {
+        if (active) {
+            event.preventDefault();
+            let mousePosition = { x : event.clientX, y : event.clientY };
+            let newLeft = mousePosition.x + offset[0];
+            let newTop = mousePosition.y + offset[1];
+            
+            const parent = document.querySelector('.video-container').getBoundingClientRect();
+            const rect = localVideoContainer.getBoundingClientRect();
+            const chatHeight = window.innerWidth <= 768 ? 280 : 0;
+
+            // Boundaries
+            if (newLeft < parent.left) newLeft = parent.left;
+            if (newLeft + rect.width > parent.right) newLeft = parent.right - rect.width;
+            if (newTop < parent.top) newTop = parent.top;
+            if (newTop + rect.height > parent.bottom - chatHeight) newTop = parent.bottom - chatHeight - rect.height;
+
+            localVideoContainer.style.left = newLeft + 'px';
+            localVideoContainer.style.top = newTop + 'px';
+            localVideoContainer.style.bottom = 'auto';
+            localVideoContainer.style.right = 'auto';
+        }
+    }, true);
+
+    // Touch support
+    localVideoContainer.addEventListener("touchstart", (e) => {
+        active = true;
+        offset = [
+            localVideoContainer.offsetLeft - e.touches[0].clientX,
+            localVideoContainer.offsetTop - e.touches[0].clientY
+        ];
+    }, true);
+
+    document.addEventListener("touchend", () => {
+        active = false;
+    }, true);
+
+    document.addEventListener("touchmove", (e) => {
+        if (active) {
+            let touchPosition = { x : e.touches[0].clientX, y : e.touches[0].clientY };
+            let newLeft = touchPosition.x + offset[0];
+            let newTop = touchPosition.y + offset[1];
+            
+            const parent = document.querySelector('.video-container').getBoundingClientRect();
+            const rect = localVideoContainer.getBoundingClientRect();
+            const chatHeight = window.innerWidth <= 768 ? 280 : 0;
+
+            if (newLeft < parent.left) newLeft = parent.left;
+            if (newLeft + rect.width > parent.right) newLeft = parent.right - rect.width;
+            if (newTop < parent.top) newTop = parent.top;
+            if (newTop + rect.height > parent.bottom - chatHeight) newTop = parent.bottom - chatHeight - rect.height;
+
+            localVideoContainer.style.left = newLeft + 'px';
+            localVideoContainer.style.top = newTop + 'px';
+            localVideoContainer.style.bottom = 'auto';
+            localVideoContainer.style.right = 'auto';
+        }
+    }, { passive: false });
+}
+
 function updateFreePassUI() {
     const freePassBtn = document.getElementById('freePassBtn');
     if (!freePassBtn) return;
@@ -78,18 +232,15 @@ function setupEventListeners() {
     };
 
     hangupBtn.onclick = async () => {
-        await adOptimizer.trackClick(myInfo.freePass);
         stopAutoMatching(); hangup(); onDisconnect();
     };
 
     friendListBtn.onclick = async () => {
-        await adOptimizer.trackClick(myInfo.freePass);
         toggleFriends();
     };
 
     if (settingsBtn) {
         settingsBtn.onclick = async () => {
-            await adOptimizer.trackClick(myInfo.freePass);
             // open settings logic
         };
     }
