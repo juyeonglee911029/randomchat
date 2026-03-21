@@ -9,7 +9,7 @@
      crossorigin="anonymous"></script>
     <link rel="canonical" href="https://yellowchat.app/">
     
-    <!-- Deployment Version: 2026-03-11-10-30-00 (Fix AdSense Detection) -->
+    <!-- Deployment Version: 2026-03-18 -->
     <meta name="theme-color" content="#1e1e1e">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -97,6 +97,22 @@
                 </div>
             </aside>
 
+            <!-- Friends Sidebar (Left) -->
+            <aside class="friends-sidebar" id="friendListArea">
+                <div class="friends-header">
+                    <h3>FRIENDS</h3>
+                </div>
+                <div class="friend-search-area">
+                    <input type="text" id="friendSearchInput" placeholder="ID...">
+                    <button id="friendSearchBtn" class="search-btn">
+                        <i class="material-icons">search</i>
+                    </button>
+                </div>
+                <div id="friendListInner" class="friend-list-inner">
+                    <!-- Friends will be listed here -->
+                </div>
+            </aside>
+
             <!-- Video Area -->
             <section class="video-container">
                 <div class="video-logo-overlay">
@@ -106,37 +122,6 @@
                         </svg>
                     </div>
                     <span class="logo-text">YELLOWCHAT</span>
-                </div>
-
-                <div class="stats-overlay">
-                    <div class="stat-item">
-                        <i class="material-icons" style="font-size: 14px;">circle</i>
-                        <span id="onlineCount">0</span> Online
-                    </div>
-                    <div id="callTimer" class="stat-item timer">
-                        <i class="material-icons" style="font-size: 14px;">timer</i>
-                        <span id="timerValue">00:00</span>
-                    </div>
-                </div>
-
-                <div class="video-controls-bottom">
-                    <div class="video-control-item" title="Microphone Volume">
-                        <i class="material-icons" id="micToggleBtn">mic</i>
-                        <input type="range" id="micVolumeSlider" min="0" max="1" step="0.1" value="1" class="yellow-slider">
-                    </div>
-                    <div class="video-control-item" title="Brightness">
-                        <i class="material-icons">brightness_6</i>
-                        <input type="range" id="brightnessSlider" min="50" max="150" step="5" value="100" class="yellow-slider">
-                    </div>
-                    <div class="video-control-item" title="Mirror View">
-                        <button id="mirrorToggleBtn" class="video-control-btn">
-                            <i class="material-icons">flip</i>
-                        </button>
-                    </div>
-                    <div class="video-control-item" title="Remote Volume">
-                        <i class="material-icons" id="remoteVolumeBtn">volume_up</i>
-                        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1" class="yellow-slider">
-                    </div>
                 </div>
 
                 <div class="video-wrapper remote-wrapper">
@@ -163,6 +148,13 @@
                             </svg>
                         </a>
                     </div>
+
+                    <div class="stats-overlay">
+                        <div class="stat-item">
+                            <i class="material-icons" style="font-size: 14px;">circle</i>
+                            <span id="onlineCount">0</span> Online
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="video-wrapper local-wrapper" id="localVideoContainer">
@@ -180,6 +172,26 @@
                                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                             </svg>
                         </a>
+                    </div>
+                </div>
+
+                <div class="video-controls-bottom">
+                    <div class="video-control-item" title="Microphone Volume">
+                        <i class="material-icons" id="micToggleBtn">mic</i>
+                        <input type="range" id="micVolumeSlider" min="0" max="1" step="0.1" value="1" class="yellow-slider">
+                    </div>
+                    <div class="video-control-item" title="Brightness">
+                        <i class="material-icons">brightness_6</i>
+                        <input type="range" id="brightnessSlider" min="50" max="150" step="5" value="100" class="yellow-slider">
+                    </div>
+                    <div class="video-control-item" title="Mirror View">
+                        <button id="mirrorToggleBtn" class="video-control-btn">
+                            <i class="material-icons">flip</i>
+                        </button>
+                    </div>
+                    <div class="video-control-item" title="Remote Volume">
+                        <i class="material-icons" id="remoteVolumeBtn">volume_up</i>
+                        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="1" class="yellow-slider">
                     </div>
                 </div>
             </section>
@@ -205,22 +217,11 @@
                         <div class="system-message">Welcome to YELLOWCHAT. Click "Find Stranger" to start.</div>
                     </div>
                 </div>
-
-                <div id="friendListArea" class="friend-list-area" style="display: none;">
-                    <div class="friend-search-area">
-                        <input type="text" id="friendSearchInput" placeholder="Enter Instagram ID or User ID...">
-                        <button id="friendSearchBtn" class="search-btn">
-                            <i class="material-icons">search</i>
-                        </button>
-                    </div>
-                    <div id="friendListInner" class="friend-list-inner">
-                        <!-- Friends will be listed here -->
-                    </div>
-                </div>
             </aside>
-            </main>
+        </main>
 
-            <!-- Matching Animation Overlay -->        <div id="matchingOverlay" class="matching-overlay" style="display: none;">
+        <!-- Matching Animation Overlay -->
+        <div id="matchingOverlay" class="matching-overlay" style="display: none;">
             <div class="matching-content">
                 <div class="loader-wrapper">
                     <div class="loader-pulse"></div>
