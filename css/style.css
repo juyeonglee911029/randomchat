@@ -41,11 +41,11 @@ body {
 /* Header */
 .header {
     display: flex;
-    padding: 0.4rem 1.5rem; 
+    height: 70px; /* Fixed height for consistency */
+    padding: 0 1.5rem; 
     background-color: var(--bg-panel);
     border-bottom: 1px solid var(--border-color);
     z-index: 100;
-    min-height: 60px; 
 }
 
 .header-main {
@@ -53,13 +53,30 @@ body {
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    height: 100%;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo-svg {
+    width: 32px;
+    height: 32px;
+    color: var(--primary);
 }
 
 .logo-text {
+    font-size: 1.5rem;
     font-weight: 900;
-    color: var(--primary);
+    color: var(--primary); /* Force primary color (yellow) */
     letter-spacing: -1px;
 }
+
+.logo-text .yellow { color: var(--primary); }
+.logo-text .chat { color: #ffffff; }
 
 .header-right { display: flex; align-items: center; gap: 1rem; }
 
